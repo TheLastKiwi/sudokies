@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/flutter/bin/flutter test *)",
+      "Bash(timeout 240 ~/flutter/bin/dart run tool/build_bank.dart --easy=6 --medium=6 --hard=5 --expert=3 --extreme=2 --maxAttempts=6000)",
+      "Bash(~/flutter/bin/dart run *)",
+      "Bash(~/flutter/bin/flutter analyze *)",
+      "Bash(~/flutter/bin/flutter create *)",
+      "Bash(~/flutter/bin/flutter build *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(/usr/libexec/java_home -V)",
+      "Bash(~/flutter/bin/flutter doctor *)",
+      "Bash(grep -iA1 \"Java binary\\\\|Java version\\\\|Android Studio at\")",
+      "Bash(~/flutter/bin/flutter devices *)",
+      "Bash(~/Library/Android/sdk/platform-tools/adb devices *)",
+      "Bash(adb devices *)"
+    ]
+  }
+}
