@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "techniques": [
+    {
+      "id": "full_house",
+      "name": "Full House",
+      "tier": "easy",
+      "rank": 0,
+      "description": "A unit (row, column or box) with only one empty cell. That cell must hold the one digit missing from the unit.",
+      "exampleBoard": "1549..27..237....1867...4.9.925..68...5....97..8...5.2.31.8.....7.....1..8.4.1..."
+    },
+    {
+      "id": "naked_single",
+      "name": "Naked Single",
+      "tier": "easy",
+      "rank": 1,
+      "description": "A cell with only one remaining candidate. No other digit can go there, so place it.",
+      "exampleBoard": ".549..27..237....1867...4.9.925..68...5....97..8...5.2.31.8.....7.....1..8.4.1..."
+    },
+    {
+      "id": "hidden_single",
+      "name": "Hidden Single",
+      "tier": "easy",
+      "rank": 5,
+      "description": "Within a unit, a digit can only go in one cell even though that cell has other candidates. Place the digit there.",
+      "exampleBoard": "..49..2.....7....186....4...925..68...5....97..8...5.2.31.8.....7.....1....4.1..."
+    },
+    {
+      "id": "pointing",
+      "name": "Pointing Pair/Triple",
+      "tier": "medium",
+      "rank": 11,
+      "description": "In a box, all candidates for a digit lie on a single row or column. That digit can be removed from the rest of that row or column.",
+      "exampleBoard": "1549.827.9237..8.18671..4.9.9251.68..458..197.18...5.2.31.8....47.....18.8.4.1..."
+    },
+    {
+      "id": "claiming",
+      "name": "Claiming (Box-Line)",
+      "tier": "medium",
+      "rank": 12,
+      "description": "In a row or column, all candidates for a digit lie within one box. That digit can be removed from the rest of that box.",
+      "exampleBoard": "1549.827.9237..8.18671..4.9.9251.68..458..197.18...5.2.31.8....47.....18.8.4.1..."
+    },
+    {
+      "id": "naked_pair",
+      "name": "Naked Pair",
+      "tier": "medium",
+      "rank": 13,
+      "description": "Two cells in a unit share the same two candidates. Those two digits can be removed from every other cell in the unit.",
+      "exampleBoard": ".13857.49.75.....88496.3.757321..9.49.1472..64.....7121.759..2359...1..732.7.8591"
+    },
+    {
+      "id": "hidden_pair",
+      "name": "Hidden Pair",
+      "tier": "medium",
+      "rank": 14,
+      "description": "Two digits can only go in the same two cells of a unit. All other candidates can be removed from those two cells.",
+      "exampleBoard": "..6.5.7.27...4.59..5.7...345..4.79..6.7...245...5.6...375..4129962173458184295..."
+    },
+    {
+      "id": "naked_triple",
+      "name": "Naked Triple",
+      "tier": "hard",
+      "rank": 21,
+      "description": "Three cells in a unit together hold only three candidates. Those three digits can be removed from the rest of the unit.",
+      "exampleBoard": "8.7...4314.5...9822.18..576..4.9.16.91.46..57..6..3249148...625.79..6.1.6.....79."
+    },
+    {
+      "id": "hidden_triple",
+      "name": "Hidden Triple",
+      "tier": "hard",
+      "rank": 22,
+      "description": "Three digits are confined to the same three cells of a unit. Other candidates can be removed from those cells.",
+      "exampleBoard": "8.7...4314.5...9822.18..576..4.9.16.91.46..5...6..3249148...625.79..6.1.6.....79."
+    },
+    {
+      "id": "naked_quad",
+      "name": "Naked Quad",
+      "tier": "hard",
+      "rank": 25,
+      "description": "Four cells in a unit together hold only four candidates. Those four digits can be removed from the rest of the unit.",
+      "exampleBoard": "3..5.4..6.5.9.67.44.6..15...3...764..84....7...74.3.5894....16..62..54...1.64..2."
+    },
+    {
+      "id": "x_wing",
+      "name": "X-Wing",
+      "tier": "hard",
+      "rank": 26,
+      "description": "A digit forms a rectangle: in two rows it appears in only the same two columns (or vice versa). It can be removed from those columns elsewhere.",
+      "exampleBoard": "1..8...73.8..7...9.7.6.318256.....2....538761.18..6...6.1.85.37.39.62.1..5.31...6"
+    },
+    {
+      "id": "swordfish",
+      "name": "Swordfish",
+      "tier": "expert",
+      "rank": 31,
+      "description": "A 3x3 generalisation of the X-Wing: a digit confined to three columns across three rows lets you eliminate it elsewhere in those columns.",
+      "exampleBoard": ".8764..3..1.387....6.1........2..519..1.9.3....9..142..9.8..........3..5..4.167.."
+    },
+    {
+      "id": "xy_wing",
+      "name": "XY-Wing",
+      "tier": "expert",
+      "rank": 32,
+      "description": "A pivot cell XY sees two cells XZ and YZ. Whichever digit the pivot takes, one wing becomes Z, so Z is removed from cells seeing both wings.",
+      "exampleBoard": "..635.7.27...4.59..5.7...345..4.79..6.79..245...5.6...375..4129962173458184295..."
+    },
+    {
+      "id": "simple_colouring",
+      "name": "Simple Colouring",
+      "tier": "expert",
+      "rank": 33,
+      "description": "Chain the two cells of each conjugate pair for a digit with alternating colours. A cell seeing both colours cannot hold the digit.",
+      "exampleBoard": "..635.7.27...4.59..5.7...345..4.79..6.79..245...5.6...375..4129962173458184295..."
+    },
+    {
+      "id": "unique_rectangle",
+      "name": "Unique Rectangle (Type 1)",
+      "tier": "extreme",
+      "rank": 40,
+      "description": "Four cells forming a rectangle across two boxes sharing the same two candidates would give two solutions. Removing the extra-candidate cell's pair digits avoids the deadly pattern.",
+      "exampleBoard": ".13857.49.75.....88496.3.757321..9.49.1472..64.....7121.759..2359...1..732.7.8591"
+    },
+    {
+      "id": "xyz_wing",
+      "name": "XYZ-Wing",
+      "tier": "extreme",
+      "rank": 41,
+      "description": "Like an XY-Wing but the pivot also contains Z. Cells seeing all three of the pivot and both wings cannot hold Z.",
+      "exampleBoard": "791482356.68.97124.2....987.3.2.8....5.9.4.3887..3.....871.349221384967594.72.813"
+    },
+    {
+      "id": "jellyfish",
+      "name": "Jellyfish",
+      "tier": "extreme",
+      "rank": 42,
+      "description": "A 4x4 fish: a digit confined to four columns across four rows lets you eliminate it elsewhere in those columns.",
+      "exampleBoard": ""
+    }
+  ]
+}
