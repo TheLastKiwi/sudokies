@@ -27,6 +27,7 @@ class BoardColors {
   static const selected = Color(0xFFBBDEFB);
   static const peer = Color(0xFFE8F0FE);
   static const sameDigit = Color(0xFFC5E1A5);
+  static const sameDigitNote = Color(0xFFECF5DF);
   static const gridLine = Color(0xFF90A4AE);
   static const gridLineThick = Color(0xFF37474F);
   static const pencil = Color(0xFF607D8B);

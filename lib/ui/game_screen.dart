@@ -36,6 +36,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    game.dispose();
     super.dispose();
   }
 

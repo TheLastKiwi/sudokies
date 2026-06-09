@@ -1,7 +1,7 @@
 /// Hint engine: finds the next applicable technique on the player's current
-/// board. When the player has pencil marks, hints respect them; empty cells
-/// the player hasn't annotated fall back to basic (row/col/box) elimination so
-/// hints still work when no notes are kept.
+/// board, using only the pencil marks the player has actually entered. A cell
+/// the player hasn't annotated contributes no candidates, so a technique only
+/// surfaces once enough notes are present for it to be visible to the player.
 library;
 
 import 'grid.dart';
@@ -10,14 +10,16 @@ import 'strategies/strategy.dart';
 
 /// The cheapest technique that makes progress on the board defined by [values]
 /// (length 81, 0 = empty). When [notes] (player pencil-mark masks) is supplied,
-/// the search uses the player's candidates for any cell they've annotated,
+/// the search restricts every empty cell to the player's own candidates,
 /// intersected with the basic set so a stray mark can't introduce a candidate a
-/// placed peer already rules out. Returns null if no technique applies.
+/// placed peer already rules out. Empty cells the player hasn't annotated have
+/// no candidates, so no technique applies until they add notes. Returns null if
+/// no technique applies.
 SolveStep? nextHint(List<int> values, [List<int>? notes]) {
   final g = CandidateGrid.fromValues(values);
   if (notes != null) {
     for (var i = 0; i < cellCount; i++) {
-      if (values[i] == 0 && notes[i] != 0) g.cands[i] &= notes[i];
+      if (values[i] == 0) g.cands[i] &= notes[i];
     }
   }
   for (final s in allStrategies) {

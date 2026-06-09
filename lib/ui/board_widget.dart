@@ -37,13 +37,18 @@ class BoardWidget extends StatelessWidget {
     // Selection-derived highlight sets (live play only).
     final peerSet = <int>{};
     final sameDigitSet = <int>{};
+    final sameNoteSet = <int>{};
     if (interactive && selectedCell != null) {
       final sel = selectedCell!;
       peerSet.addAll(peers[sel]);
       final d = values[sel];
       if (d != 0) {
         for (var i = 0; i < cellCount; i++) {
-          if (values[i] == d || maskHas(candidates[i], d)) sameDigitSet.add(i);
+          if (values[i] == d) {
+            sameDigitSet.add(i);
+          } else if (maskHas(candidates[i], d)) {
+            sameNoteSet.add(i);
+          }
         }
       }
     }
@@ -72,6 +77,7 @@ class BoardWidget extends StatelessWidget {
                           r * 9 + c,
                           peerSet,
                           sameDigitSet,
+                          sameNoteSet,
                           candByCell,
                         ),
                       ),
@@ -88,6 +94,7 @@ class BoardWidget extends StatelessWidget {
     int i,
     Set<int> peerSet,
     Set<int> sameDigitSet,
+    Set<int> sameNoteSet,
     Map<int, List<CandidateMark>> candByCell,
   ) {
     final r = rowOf(i), c = colOf(i);
@@ -98,6 +105,8 @@ class BoardWidget extends StatelessWidget {
       bg = BoardColors.selected;
     } else if (sameDigitSet.contains(i)) {
       bg = BoardColors.sameDigit;
+    } else if (sameNoteSet.contains(i)) {
+      bg = BoardColors.sameDigitNote;
     } else if (peerSet.contains(i)) {
       bg = BoardColors.peer;
     }

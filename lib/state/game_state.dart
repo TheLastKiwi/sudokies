@@ -67,6 +67,11 @@ class GameState extends ChangeNotifier {
 
   int? selectedCell;
   EntryMode mode = EntryMode.fill;
+
+  // Auto-entry: when on, the pad selects a "pen" digit instead of writing it,
+  // and tapping a cell applies that digit (in the current mode) automatically.
+  bool autoEntry = false;
+  int? penDigit;
   int hintsUsed = 0;
   int elapsedSeconds = 0;
   bool paused = false;
@@ -105,6 +110,46 @@ class GameState extends ChangeNotifier {
         elapsedSeconds = savedElapsed {
     solved = _isWin();
     _recordAttempt();
+    _lastAutoPrune = settings.autoPrune;
+    settings.addListener(_onSettingsChanged);
+  }
+
+  late bool _lastAutoPrune;
+
+  @override
+  void dispose() {
+    settings.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  /// When auto-prune is switched on, retroactively clear every note that
+  /// conflicts with a placed value so the board matches the new setting.
+  void _onSettingsChanged() {
+    if (settings.autoPrune && !_lastAutoPrune) {
+      pruneAllCandidates();
+    }
+    _lastAutoPrune = settings.autoPrune;
+  }
+
+  /// Remove, from both note layers, any candidate that a peer already holds as
+  /// a placed value.
+  void pruneAllCandidates() {
+    final manual = List<int>.from(_manual);
+    final auto = List<int>.from(_auto);
+    for (var cell = 0; cell < cellCount; cell++) {
+      final digit = entries[cell];
+      if (digit == 0) continue;
+      for (final p in peers[cell]) {
+        manual[p] &= ~maskOf(digit);
+        auto[p] &= ~maskOf(digit);
+      }
+    }
+    final changed = !listEquals(manual, _manual) || !listEquals(auto, _auto);
+    if (!changed) return;
+    _pushUndo();
+    _manual.setAll(0, manual);
+    _auto.setAll(0, auto);
+    _afterChange();
   }
 
   bool get isGiven => false; // helper unused; see givenAt
@@ -116,6 +161,23 @@ class GameState extends ChangeNotifier {
   // ---- Selection ----------------------------------------------------------
   void selectCell(int i) {
     selectedCell = i;
+    if (autoEntry && penDigit != null) {
+      _applyDigit(i, penDigit!);
+      return; // _applyDigit notifies
+    }
+    notifyListeners();
+  }
+
+  /// Toggle auto-entry. Clears the held pen digit when switching off.
+  void toggleAutoEntry() {
+    autoEntry = !autoEntry;
+    if (!autoEntry) penDigit = null;
+    notifyListeners();
+  }
+
+  /// Pick (or unpick) the pen digit used by auto-entry.
+  void selectPenDigit(int digit) {
+    penDigit = penDigit == digit ? null : digit;
     notifyListeners();
   }
 
@@ -146,7 +208,12 @@ class GameState extends ChangeNotifier {
 
   void inputDigit(int digit) {
     final cell = selectedCell;
-    if (cell == null || givenAt(cell)) return;
+    if (cell == null) return;
+    _applyDigit(cell, digit);
+  }
+
+  void _applyDigit(int cell, int digit) {
+    if (givenAt(cell)) return;
     _pushUndo();
     if (mode == EntryMode.fill) {
       if (entries[cell] == digit) {
@@ -281,7 +348,7 @@ class GameState extends ChangeNotifier {
             description:
                 'Fill in more candidate notes so a technique becomes visible.',
             values: List<int>.from(entries),
-            candidates: _basicCandidates(entries),
+            candidates: _displayCandidates(entries, candidates),
             stages: const [
               HintStage(
                   text:
@@ -294,9 +361,43 @@ class GameState extends ChangeNotifier {
           notifyListeners();
           return;
         }
+        final info = library.byId(step.strategyId);
+        final stepTier = info?.tier ?? tierForRank(step.difficultyRank);
+        if (stepTier.index > puzzle.difficulty.index) {
+          // The only move the player's notes expose is harder than the
+          // puzzle's rated difficulty. If a fuller candidate grid would reveal
+          // a strictly easier technique, nudge them to add notes rather than
+          // teach the hard one.
+          final fullStep = nextHint(entries);
+          final fullTier = fullStep == null
+              ? null
+              : (library.byId(fullStep.strategyId)?.tier ??
+                  tierForRank(fullStep.difficultyRank));
+          if (fullTier != null && fullTier.index < stepTier.index) {
+            hintView = HintView(
+              strategyName: 'Easier move available',
+              description:
+                  'Filling in more candidate notes reveals an easier strategy.',
+              values: List<int>.from(entries),
+              candidates: _displayCandidates(entries, candidates),
+              stages: [
+                HintStage(
+                    text:
+                        'Your notes only reveal a ${stepTier.label.toLowerCase()} '
+                        'technique (${info?.name ?? step.strategyName}), but this '
+                        'is a ${puzzle.difficulty.label.toLowerCase()} puzzle. Fill '
+                        'in more pencil marks to unlock an easier strategy.'),
+              ],
+              onCurrentBoard: true,
+              canApply: false,
+            );
+            hintPhase = HintPhase.current;
+            notifyListeners();
+            return;
+          }
+        }
         _pendingStep = step;
         hintsUsed++;
-        final info = library.byId(step.strategyId);
         if (info != null && info.hasExample) {
           final exampleValues = info.exampleValues;
           final example = runStrategyExample(step.strategyId, exampleValues);
@@ -398,18 +499,14 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  List<int> _basicCandidates(List<int> values) {
-    final g = CandidateGrid.fromValues(values);
-    return List<int>.from(g.cands);
-  }
-
-  /// Candidates to render on the current-board hint: the player's pencil marks
-  /// where they've annotated, basic elimination elsewhere. Mirrors the set the
+  /// Candidates to render on the current-board hint: only the player's own
+  /// pencil marks, intersected with basic elimination so an impossible stray
+  /// mark isn't shown. Un-annotated cells render empty. Mirrors the set the
   /// hint engine analyses so highlighted cells line up with the player's notes.
   List<int> _displayCandidates(List<int> values, List<int> notes) {
     final g = CandidateGrid.fromValues(values);
     for (var i = 0; i < cellCount; i++) {
-      if (values[i] == 0 && notes[i] != 0) g.cands[i] &= notes[i];
+      if (values[i] == 0) g.cands[i] &= notes[i];
     }
     return List<int>.from(g.cands);
   }

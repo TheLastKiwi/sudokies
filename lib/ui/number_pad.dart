@@ -20,11 +20,29 @@ class NumberPad extends StatelessWidget {
       children: [
         _modeToggle(context),
         const SizedBox(height: 8),
+        _autoToggle(context),
+        const SizedBox(height: 8),
         Row(
           children: [
             for (var d = 1; d <= 9; d++)
               Expanded(child: _digit(context, d)),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _autoToggle(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.auto_fix_high, size: 18),
+        const SizedBox(width: 8),
+        const Expanded(
+          child: Text('Auto entry — pick a number, then tap cells to fill'),
+        ),
+        Switch(
+          value: game.autoEntry,
+          onChanged: (_) => game.toggleAutoEntry(),
         ),
       ],
     );
@@ -63,15 +81,23 @@ class NumberPad extends StatelessWidget {
 
   Widget _digit(BuildContext context, int d) {
     final remaining = _remaining(d);
-    final exhausted = remaining <= 0;
+    // Only block a fully-placed digit in Fill mode. In Notes mode the digit
+    // must stay tappable so a leftover pencil mark can be toggled off.
+    final exhausted = remaining <= 0 && game.mode == EntryMode.fill;
+    final selected = game.autoEntry && game.penDigit == d;
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: AspectRatio(
         aspectRatio: 0.78,
         child: OutlinedButton(
-          onPressed: exhausted ? null : () => game.inputDigit(d),
+          onPressed: exhausted
+              ? null
+              : () => game.autoEntry ? game.selectPenDigit(d) : game.inputDigit(d),
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
+            backgroundColor: selected ? scheme.primaryContainer : null,
+            side: selected ? BorderSide(color: scheme.primary, width: 2) : null,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
