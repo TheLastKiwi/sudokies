@@ -29,12 +29,12 @@ String _makeCode(Random rng, Set<String> used) {
 
 Map<String, int> _parseArgs(List<String> args) {
   final defaults = {
-    'easy': 8,
-    'medium': 8,
-    'hard': 6,
-    'expert': 4,
-    'extreme': 3,
-    'maxAttempts': 8000,
+    'easy': 300,
+    'medium': 300,
+    'hard': 300,
+    'expert': 300,
+    'extreme': 300,
+    'maxAttempts': 2000000,
   };
   for (final a in args) {
     final m = RegExp(r'^--(\w+)=(\d+)$').firstMatch(a);

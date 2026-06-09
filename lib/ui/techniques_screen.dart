@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../data/technique_library.dart';
-import '../engine/grid.dart';
 import '../engine/hint.dart';
 import '../engine/step.dart';
 import 'board_widget.dart';
@@ -74,8 +73,9 @@ class _TechniqueDetailScreenState extends State<TechniqueDetailScreen> {
     final info = widget.info;
     if (info.hasExample) {
       _values = info.exampleValues;
-      _candidates = List<int>.from(CandidateGrid.fromValues(_values).cands);
-      _step = runStrategyOn(info.id, _values);
+      final example = runStrategyExample(info.id, _values);
+      _candidates = example.candidates;
+      _step = example.step;
     } else {
       _values = const [];
       _candidates = const [];

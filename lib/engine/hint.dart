@@ -27,11 +27,35 @@ SolveStep? nextHint(List<int> values, [List<int>? notes]) {
   return null;
 }
 
-/// Run a technique's step on an arbitrary board (used to render an example
-/// puzzle in the techniques bank / hint teaching stage).
-SolveStep? runStrategyOn(String strategyId, List<int> values) {
-  final s = strategyById(strategyId);
-  if (s == null) return null;
+/// Render-ready example for a technique: the step plus the candidate masks it
+/// fires on. Mined example boards store only placements, but many techniques
+/// (hidden subsets, fish, …) only emerge after earlier eliminations. A fresh
+/// basic-candidate grid wouldn't reproduce them, so we replay the logical
+/// solver cheapest-first until [strategyId] is the chosen technique and return
+/// the reduced grid at that moment.
+({SolveStep? step, List<int> candidates}) runStrategyExample(
+  String strategyId,
+  List<int> values,
+) {
   final g = CandidateGrid.fromValues(values);
-  return s.apply(g);
+  const maxSteps = 81 * 9 + 81;
+  for (var steps = 0; steps < maxSteps && !g.isSolved; steps++) {
+    SolveStep? step;
+    for (final s in allStrategies) {
+      step = s.apply(g);
+      if (step != null && !step.isEmpty) break;
+      step = null;
+    }
+    if (step == null) break; // stuck
+    if (step.strategyId == strategyId) {
+      return (step: step, candidates: List<int>.from(g.cands));
+    }
+    for (final p in step.placements) {
+      if (g.values[p.cell] == 0) g.place(p.cell, p.digit);
+    }
+    for (final e in step.eliminations) {
+      g.eliminate(e.cell, e.digit);
+    }
+  }
+  return (step: null, candidates: List<int>.from(g.cands));
 }

@@ -277,13 +277,15 @@ class GameState extends ChangeNotifier {
         if (step == null) {
           hintPhase = HintPhase.none;
           hintView = HintView(
-            strategyName: 'No hint',
+            strategyName: 'Add more notes',
             description:
-                'No implemented technique applies. Try checking for mistakes.',
+                'Fill in more candidate notes so a technique becomes visible.',
             values: List<int>.from(entries),
             candidates: _basicCandidates(entries),
             stages: const [
-              HintStage(text: 'Nothing to suggest right now.'),
+              HintStage(
+                  text:
+                      'No technique applies with your current notes. Add more pencil marks to unlock a hint.'),
             ],
             onCurrentBoard: true,
             canApply: false,
@@ -297,13 +299,13 @@ class GameState extends ChangeNotifier {
         final info = library.byId(step.strategyId);
         if (info != null && info.hasExample) {
           final exampleValues = info.exampleValues;
-          final exampleStep = runStrategyOn(step.strategyId, exampleValues);
+          final example = runStrategyExample(step.strategyId, exampleValues);
           hintView = HintView(
             strategyName: info.name,
             description: info.description,
             values: exampleValues,
-            candidates: _basicCandidates(exampleValues),
-            stages: exampleStep?.stages ?? const [],
+            candidates: example.candidates,
+            stages: example.step?.stages ?? const [],
             onCurrentBoard: false,
             canApply: false,
           );
