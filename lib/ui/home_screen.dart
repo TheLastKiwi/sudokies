@@ -196,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Positioned(
-            right: 0,
+            left: 0,
             bottom: 0,
             child: SafeArea(
               child: IgnorePointer(
