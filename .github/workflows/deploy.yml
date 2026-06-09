@@ -17,7 +17,7 @@ jobs:
           channel: stable
           flutter-version: '3.22.3'
       - run: flutter pub get
-      - run: flutter build web --release --base-href /sudokies/
+      - run: flutter build web --release --source-maps --base-href /sudokies/
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
