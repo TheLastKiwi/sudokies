@@ -137,11 +137,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final saved = savedGamePuzzle(services.prefs);
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: ListView(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: ListView(
               padding: const EdgeInsets.all(24),
               shrinkWrap: true,
               children: [
@@ -188,10 +190,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 24),
                   const Center(child: CircularProgressIndicator()),
                 ],
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              child: IgnorePointer(
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Text(
+                    appVersion,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.black.withOpacity(0.25),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
