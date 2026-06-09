@@ -19,12 +19,17 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Sudokies puzzle app">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Use the default status bar (not black-translucent). black-translucent
+       makes the webview extend under the status bar; in iOS standalone mode
+       Flutter web then double-counts the top safe-area inset, pushing all
+       content and its touch targets down by ~2x the notch height. Reserving
+       the status bar gives Flutter a clean, zero-inset viewport. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Sudokies">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
