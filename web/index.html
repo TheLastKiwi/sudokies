@@ -33,6 +33,28 @@
 
   <title>Sudokies</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Pin the document to the visual viewport so Flutter measures the
+       correct size in iOS standalone (homescreen) mode. Without this,
+       the body can report a stale/wrong height at startup, causing the
+       render surface to be squished and touch coordinates to be offset. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
