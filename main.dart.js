@@ -86342,7 +86342,7 @@ n.push(A.nY(!1,q,q,q,!0,q,q,!1,A.lw(B.FB,q,q),q,new A.agG(r),!1,q,q,q,q,q,A.bw("
 n.push(A.nY(!1,q,q,q,!0,q,q,!1,A.lw(B.Ft,q,q),q,new A.agH(r),!1,q,q,q,q,q,A.bw("History",q,q,q,q,q,q),B.dt,q))
 n.push(A.nY(!1,q,q,q,!0,q,q,!1,A.lw(B.oa,q,q),q,new A.agI(r),!1,q,q,q,q,q,A.bw("Settings",q,q,q,q,q,q),B.dt,q))
 if(r.d)B.b.T(n,A.b([B.li,B.Cj],o))
-return A.zc(q,A.kB(B.cC,A.b([A.kt(!0,A.fv(new A.dT(B.B5,A.a2f(n,B.nC,!0),q),q,q),B.ac,!0),A.a6S(0,A.kt(!0,A.nO(new A.bN(B.nE,A.bw("v0.1.5",q,q,q,A.fS(q,q,A.H(64,0,0,0),q,q,q,q,q,q,q,q,9,q,q,q,q,q,!0,q,q,q,q,q,q,q,q),q,q),q),!0,q),B.ac,!0),q,q,0,q,q,q)],o),B.a1,B.ca))},
+return A.zc(q,A.kB(B.cC,A.b([A.kt(!0,A.fv(new A.dT(B.B5,A.a2f(n,B.nC,!0),q),q,q),B.ac,!0),A.a6S(0,A.kt(!0,A.nO(new A.bN(B.nE,A.bw("v0.1.6",q,q,q,A.fS(q,q,A.H(64,0,0,0),q,q,q,q,q,q,q,q,9,q,q,q,q,q,!0,q,q,q,q,q,q,q,q),q,q),q),!0,q),B.ac,!0),q,q,0,q,q,q)],o),B.a1,B.ca))},
 oC(a){return this.aaw(a)},
 aaw(a){var s=0,r=A.R(t.H),q=this,p,o
 var $async$oC=A.S(function(b,c){if(b===1)return A.O(c,r)
@@ -92951,3 +92951,4 @@ return}var s=document.scripts
 function onLoad(b){for(var q=0;q<s.length;++q){s[q].removeEventListener("load",onLoad,false)}a(b.target)}for(var r=0;r<s.length;++r){s[r].addEventListener("load",onLoad,false)}})(function(a){v.currentScript=a
 var s=A.an5
 if(typeof dartMainRunner==="function"){dartMainRunner(s,[])}else{s([])}})})()
+//# sourceMappingURL=main.dart.js.map
