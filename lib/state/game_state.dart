@@ -27,6 +27,7 @@ class HintView {
   final List<HintStage> stages;
   final bool onCurrentBoard;
   final bool canApply;
+  final bool showBoard;
 
   const HintView({
     required this.strategyName,
@@ -36,6 +37,7 @@ class HintView {
     required this.stages,
     required this.onCurrentBoard,
     required this.canApply,
+    this.showBoard = true,
   });
 }
 
@@ -356,6 +358,7 @@ class GameState extends ChangeNotifier {
             ],
             onCurrentBoard: true,
             canApply: false,
+            showBoard: false,
           );
           hintPhase = HintPhase.current;
           notifyListeners();
@@ -390,6 +393,7 @@ class GameState extends ChangeNotifier {
               ],
               onCurrentBoard: true,
               canApply: false,
+              showBoard: false,
             );
             hintPhase = HintPhase.current;
             notifyListeners();

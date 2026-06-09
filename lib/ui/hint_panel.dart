@@ -55,17 +55,18 @@ class HintPanel extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 360),
-                      child: BoardWidget(
-                        values: view.values,
-                        candidates: view.candidates,
-                        givens: view.values, // example board: show all as fixed
-                        interactive: false,
-                        roleCells: stage?.cells ?? const {},
-                        roleCandidates: stage?.candidates ?? const [],
+                    if (view.showBoard)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: BoardWidget(
+                          values: view.values,
+                          candidates: view.candidates,
+                          givens: view.values, // example board: show all as fixed
+                          interactive: false,
+                          roleCells: stage?.cells ?? const {},
+                          roleCandidates: stage?.candidates ?? const [],
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 12),
                     if (!view.onCurrentBoard)
                       Text(view.description,

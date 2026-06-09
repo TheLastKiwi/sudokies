@@ -97,37 +97,45 @@ class _GameScreenState extends State<GameScreen> {
           listenable: Listenable.merge([game, settings]),
           builder: (context, _) {
             _maybeShowWin();
+            final hintActive = game.hintView != null;
             return Stack(
               children: [
-                Column(
-                  children: [
-                    _topBar(context),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          children: [
-                            BoardWidget(
-                              values: game.entries,
-                              candidates: game.candidates,
-                              givens: game.givens,
-                              selectedCell: game.selectedCell,
-                              wrongCells: _wrongCells(),
-                              hideContent: game.paused,
-                              onTapCell: game.selectCell,
-                            ),
-                            const SizedBox(height: 16),
-                            ControlsBar(game: game),
-                            const SizedBox(height: 12),
-                            NumberPad(game: game),
-                          ],
+                // Hide the live board while a hint overlay is up so two full
+                // boards never paint at once — iOS WebKit's canvas/memory cap
+                // crashes the tab when both render simultaneously. Offstage
+                // keeps scroll/selection state without laying out or painting.
+                Offstage(
+                  offstage: hintActive,
+                  child: Column(
+                    children: [
+                      _topBar(context),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              BoardWidget(
+                                values: game.entries,
+                                candidates: game.candidates,
+                                givens: game.givens,
+                                selectedCell: game.selectedCell,
+                                wrongCells: _wrongCells(),
+                                hideContent: game.paused,
+                                onTapCell: game.selectCell,
+                              ),
+                              const SizedBox(height: 16),
+                              ControlsBar(game: game),
+                              const SizedBox(height: 12),
+                              NumberPad(game: game),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (game.paused) _pausedOverlay(context),
-                if (game.hintView != null) HintPanel(game: game),
+                if (hintActive) HintPanel(game: game),
               ],
             );
           },
