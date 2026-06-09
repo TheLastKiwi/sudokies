@@ -19,12 +19,19 @@ class HintPanel extends StatelessWidget {
         view.stages.isEmpty ? 0 : game.hintStageIndex.clamp(0, view.stages.length - 1);
     final HintStage? stage = view.stages.isEmpty ? null : view.stages[stageIndex];
 
+    // The live board is Offstage while this overlay is up, so there is nothing
+    // to see through — use an opaque fill and a flat (shadowless) card. A
+    // translucent full-screen layer and an elevation shadow each allocate a
+    // viewport-sized offscreen surface, which trips iOS WebKit's canvas-memory
+    // cap and crashes the tab when the hint board also renders.
     return Material(
-      color: Colors.black.withOpacity(0.55),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             child: Card(
+              elevation: 0,
+              color: Theme.of(context).colorScheme.surface,
               margin: const EdgeInsets.all(16),
               child: Padding(
                 padding: const EdgeInsets.all(16),
