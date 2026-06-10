@@ -17,7 +17,10 @@ jobs:
           channel: stable
           flutter-version: '3.22.3'
       - run: flutter pub get
-      - run: flutter build web --release --source-maps --base-href /sudokies/
+      # canvaskit everywhere: the default "auto" serves the HTML renderer to
+      # mobile browsers, and on iOS WebKit's small canvas-memory cap that
+      # renderer crashes the tab on paint-heavy frames (the hint board).
+      - run: flutter build web --release --web-renderer canvaskit --source-maps --base-href /sudokies/
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
