@@ -40,3 +40,11 @@ ThemeData buildTheme() {
     brightness: Brightness.light,
   );
 }
+
+ThemeData buildDarkTheme() {
+  return ThemeData(
+    colorSchemeSeed: const Color(0xFF1565C0),
+    useMaterial3: true,
+    brightness: Brightness.dark,
+  );
+}

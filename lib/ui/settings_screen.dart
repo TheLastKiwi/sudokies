@@ -36,6 +36,13 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.showTimer,
                 onChanged: (v) => settings.showTimer = v,
               ),
+              SwitchListTile(
+                title: const Text('Dark mode'),
+                subtitle: const Text(
+                    'Use a dark colour scheme throughout the app.'),
+                value: settings.darkMode,
+                onChanged: (v) => settings.darkMode = v,
+              ),
             ],
           );
         },
