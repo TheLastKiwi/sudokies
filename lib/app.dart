@@ -9,7 +9,7 @@ import 'ui/home_screen.dart';
 import 'ui/theme.dart';
 
 /// Displayed version label. Bump alongside `version` in pubspec.yaml.
-const String appVersion = 'v0.1.6';
+const String appVersion = 'v0.1.7';
 
 /// Shared app-wide services, created once at startup.
 class Services {
@@ -63,11 +63,19 @@ class SudokiesApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScope(
       services: services,
-      child: MaterialApp(
-        title: 'Sudokies',
-        theme: buildTheme(),
-        debugShowCheckedModeBanner: false,
-        home: const HomeScreen(),
+      child: ListenableBuilder(
+        listenable: services.settings,
+        builder: (context, _) {
+          return MaterialApp(
+            title: 'Sudokies',
+            theme: buildTheme(),
+            darkTheme: buildDarkTheme(),
+            themeMode:
+                services.settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+            debugShowCheckedModeBanner: false,
+            home: const HomeScreen(),
+          );
+        },
       ),
     );
   }

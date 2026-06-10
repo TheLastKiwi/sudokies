@@ -11,6 +11,11 @@ class BoardWidget extends StatelessWidget {
   final List<int> candidates; // masks
   final List<int> givens; // 0 where not a given
   final int? selectedCell;
+
+  /// A digit to highlight across the board even when no filled cell is
+  /// selected — used by auto-entry's "pen" so picking a number lights up every
+  /// cell holding it, exactly as selecting a filled cell of that digit does.
+  final int? highlightDigit;
   final Set<int> wrongCells;
   final Map<int, HighlightRole> roleCells;
   final List<CandidateMark> roleCandidates;
@@ -24,6 +29,7 @@ class BoardWidget extends StatelessWidget {
     required this.candidates,
     required this.givens,
     this.selectedCell,
+    this.highlightDigit,
     this.wrongCells = const {},
     this.roleCells = const {},
     this.roleCandidates = const [],
@@ -38,15 +44,21 @@ class BoardWidget extends StatelessWidget {
     final peerSet = <int>{};
     final sameDigitSet = <int>{};
     final sameNoteSet = <int>{};
-    if (interactive && selectedCell != null) {
-      final sel = selectedCell!;
-      peerSet.addAll(peers[sel]);
-      final d = values[sel];
-      if (d != 0) {
+    if (interactive) {
+      int? highlight;
+      if (selectedCell != null) {
+        final sel = selectedCell!;
+        peerSet.addAll(peers[sel]);
+        if (values[sel] != 0) highlight = values[sel];
+      }
+      // Fall back to the auto-entry pen digit when no filled cell drives the
+      // highlight, so picking a number behaves like selecting that digit.
+      highlight ??= highlightDigit;
+      if (highlight != null) {
         for (var i = 0; i < cellCount; i++) {
-          if (values[i] == d) {
+          if (values[i] == highlight) {
             sameDigitSet.add(i);
-          } else if (maskHas(candidates[i], d)) {
+          } else if (maskHas(candidates[i], highlight)) {
             sameNoteSet.add(i);
           }
         }
@@ -147,7 +159,7 @@ class BoardWidget extends StatelessWidget {
       return Center(
         child: FittedBox(
           child: Padding(
-            padding: const EdgeInsets.all(2),
+            padding: const EdgeInsets.all(0.5),
             child: Text(
               '$v',
               style: TextStyle(
@@ -173,7 +185,7 @@ class BoardWidget extends StatelessWidget {
       }
     }
     return Padding(
-      padding: const EdgeInsets.all(1),
+      padding: const EdgeInsets.all(0.5),
       child: Column(
         children: [
           for (var br = 0; br < 3; br++)
@@ -204,7 +216,7 @@ class BoardWidget extends StatelessWidget {
                   shape: BoxShape.circle,
                 )
               : null,
-          padding: const EdgeInsets.all(2),
+          padding: const EdgeInsets.all(0.5),
           child: Text(
             '$d',
             style: TextStyle(
