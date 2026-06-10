@@ -344,17 +344,29 @@ class GameState extends ChangeNotifier {
       case HintPhase.none:
         final step = nextHint(entries, candidates);
         if (step == null) {
+          // No technique is visible in the player's notes. Distinguish two
+          // causes: they simply haven't noted enough yet, versus they have
+          // notes but a cell is missing the very digit it will eventually hold
+          // — without that candidate the solver can never place the cell, so no
+          // further hint is possible until they add it.
+          final hasNotes = candidates.any((m) => m != 0);
+          final missingRequired = hasNotes && !_solutionFullyNoted();
           hintPhase = HintPhase.none;
           hintView = HintView(
-            strategyName: 'Add more notes',
+            strategyName:
+                missingRequired ? 'Missing required candidates' : 'Add more notes',
             description:
                 'Fill in more candidate notes so a technique becomes visible.',
             values: List<int>.from(entries),
             candidates: _displayCandidates(entries, candidates),
-            stages: const [
+            stages: [
               HintStage(
-                  text:
-                      'No technique applies with your current notes. Add more pencil marks to unlock a hint.'),
+                  text: missingRequired
+                      ? "Some cells don't yet contain the digit they'll "
+                          'eventually hold, so the solver can\'t make progress. '
+                          'Fill in the missing candidates to unlock more hints.'
+                      : 'No technique applies with your current notes. Add more '
+                          'pencil marks to unlock a hint.'),
             ],
             onCurrentBoard: true,
             canApply: false,
@@ -501,6 +513,18 @@ class GameState extends ChangeNotifier {
     _pendingStep = null;
     hintStageIndex = 0;
     notifyListeners();
+  }
+
+  /// True when every empty cell's notes already include the digit it will hold
+  /// in the solution (filled cells are treated as already satisfied). Hints are
+  /// derived solely from the player's pencil marks, so a missing solution
+  /// candidate blocks the solver from ever placing that cell.
+  bool _solutionFullyNoted() {
+    for (var i = 0; i < cellCount; i++) {
+      if (entries[i] != 0) continue;
+      if (!maskHas(candidates[i], solutionValues[i])) return false;
+    }
+    return true;
   }
 
   /// Candidates to render on the current-board hint: only the player's own
