@@ -14,7 +14,8 @@
       "Bash(~/flutter/bin/flutter devices *)",
       "Bash(~/Library/Android/sdk/platform-tools/adb devices *)",
       "Bash(adb devices *)",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)"
     ]
   }
 }

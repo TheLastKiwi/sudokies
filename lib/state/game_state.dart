@@ -342,74 +342,84 @@ class GameState extends ChangeNotifier {
     if (solved) return;
     switch (hintPhase) {
       case HintPhase.none:
-        final step = nextHint(entries, candidates);
-        if (step == null) {
-          // No technique is visible in the player's notes. Distinguish two
-          // causes: they simply haven't noted enough yet, versus they have
-          // notes but a cell is missing the very digit it will eventually hold
-          // — without that candidate the solver can never place the cell, so no
-          // further hint is possible until they add it.
-          final hasNotes = candidates.any((m) => m != 0);
-          final missingRequired = hasNotes && !_solutionFullyNoted();
-          hintPhase = HintPhase.none;
-          hintView = HintView(
-            strategyName:
-                missingRequired ? 'Missing required candidates' : 'Add more notes',
-            description:
-                'Fill in more candidate notes so a technique becomes visible.',
-            values: List<int>.from(entries),
-            candidates: _displayCandidates(entries, candidates),
-            stages: [
-              HintStage(
-                  text: missingRequired
-                      ? "Some cells don't yet contain the digit they'll "
-                          'eventually hold, so the solver can\'t make progress. '
-                          'Fill in the missing candidates to unlock more hints.'
-                      : 'No technique applies with your current notes. Add more '
-                          'pencil marks to unlock a hint.'),
-            ],
-            onCurrentBoard: true,
-            canApply: false,
-            showBoard: false,
+        // A hint must build on annotations that can still reach the solution:
+        // no wrong entries, and every empty cell's notes containing the digit
+        // the cell will eventually hold. Otherwise any technique the solver
+        // finds rests on impossible premises, so report the problem instead.
+        if (_hasWrongEntry()) {
+          _showMessageHint(
+            name: 'Incorrect entry',
+            description: 'One of your solved cells is wrong.',
+            text: "One of the numbers you've filled in doesn't match the "
+                'solution. Find and fix it (Check marks wrong entries in red), '
+                'then ask for a hint again.',
           );
-          hintPhase = HintPhase.current;
-          notifyListeners();
           return;
         }
-        final info = library.byId(step.strategyId);
+        if (!_solutionFullyNoted()) {
+          // Distinguish two causes: a noted cell whose marks rule out the very
+          // digit it will eventually hold, versus cells simply not annotated
+          // yet. Either way the solver can't make progress until it's fixed.
+          final missingRequired = _notedCellMissingSolution();
+          _showMessageHint(
+            name: missingRequired
+                ? 'Missing required candidates'
+                : 'Add more notes',
+            description:
+                'Fill in more candidate notes so a technique becomes visible.',
+            text: missingRequired
+                ? "Some cells don't yet contain the digit they'll "
+                    'eventually hold, so the solver can\'t make progress. '
+                    'Fill in the missing candidates to unlock more hints.'
+                : 'Hints work from your pencil marks: every empty cell needs '
+                    'notes that include its true digit. Add notes to the '
+                    'cells that have none to unlock a hint.',
+          );
+          return;
+        }
+        var step = nextHint(entries, candidates);
+        if (step == null) {
+          _showMessageHint(
+            name: 'Add more notes',
+            description:
+                'Fill in more candidate notes so a technique becomes visible.',
+            text: 'No technique applies with your current notes. Add more '
+                'pencil marks to unlock a hint.',
+          );
+          return;
+        }
+        var info = library.byId(step.strategyId);
         final stepTier = info?.tier ?? tierForRank(step.difficultyRank);
         if (stepTier.index > puzzle.difficulty.index) {
           // The only move the player's notes expose is harder than the
-          // puzzle's rated difficulty. If a fuller candidate grid would reveal
-          // a strictly easier technique, nudge them to add notes rather than
-          // teach the hard one.
-          final fullStep = nextHint(entries);
-          final fullTier = fullStep == null
-              ? null
-              : (library.byId(fullStep.strategyId)?.tier ??
-                  tierForRank(fullStep.difficultyRank));
-          if (fullTier != null && fullTier.index < stepTier.index) {
-            hintView = HintView(
-              strategyName: 'Easier move available',
-              description:
-                  'Filling in more candidate notes reveals an easier strategy.',
-              values: List<int>.from(entries),
-              candidates: _displayCandidates(entries, candidates),
-              stages: [
-                HintStage(
-                    text:
-                        'Your notes only reveal a ${stepTier.label.toLowerCase()} '
-                        'technique (${info?.name ?? step.strategyName}), but this '
-                        'is a ${puzzle.difficulty.label.toLowerCase()} puzzle. Fill '
-                        'in more pencil marks to unlock an easier strategy.'),
-              ],
-              onCurrentBoard: true,
-              canApply: false,
-              showBoard: false,
-            );
-            hintPhase = HintPhase.current;
-            notifyListeners();
-            return;
+          // puzzle's rated difficulty — usually stale notes hiding the
+          // intended line. Prefer teaching a within-difficulty strategy that
+          // removes some of the player's existing notes; failing that, if a
+          // fuller candidate grid would reveal a strictly easier technique,
+          // nudge them to add notes rather than teach the hard one.
+          final removal = noteRemovalHint(entries, candidates, puzzle.difficulty);
+          if (removal != null) {
+            step = removal;
+            info = library.byId(step.strategyId);
+          } else {
+            final fullStep = nextHint(entries);
+            final fullTier = fullStep == null
+                ? null
+                : (library.byId(fullStep.strategyId)?.tier ??
+                    tierForRank(fullStep.difficultyRank));
+            if (fullTier != null && fullTier.index < stepTier.index) {
+              _showMessageHint(
+                name: 'Easier move available',
+                description:
+                    'Filling in more candidate notes reveals an easier strategy.',
+                text:
+                    'Your notes only reveal a ${stepTier.label.toLowerCase()} '
+                    'technique (${info?.name ?? step.strategyName}), but this '
+                    'is a ${puzzle.difficulty.label.toLowerCase()} puzzle. Fill '
+                    'in more pencil marks to unlock an easier strategy.',
+              );
+              return;
+            }
           }
         }
         _pendingStep = step;
@@ -513,6 +523,48 @@ class GameState extends ChangeNotifier {
     _pendingStep = null;
     hintStageIndex = 0;
     notifyListeners();
+  }
+
+  /// Show an informational hint overlay: a message with no board and no
+  /// applicable move, used when the board state blocks a real hint.
+  void _showMessageHint({
+    required String name,
+    required String description,
+    required String text,
+  }) {
+    hintView = HintView(
+      strategyName: name,
+      description: description,
+      values: List<int>.from(entries),
+      candidates: _displayCandidates(entries, candidates),
+      stages: [HintStage(text: text)],
+      onCurrentBoard: true,
+      canApply: false,
+      showBoard: false,
+    );
+    hintPhase = HintPhase.current;
+    hintStageIndex = 0;
+    notifyListeners();
+  }
+
+  /// True if any filled cell disagrees with the solution. Givens always match,
+  /// so only player entries can be wrong.
+  bool _hasWrongEntry() {
+    for (var i = 0; i < cellCount; i++) {
+      if (entries[i] != 0 && entries[i] != solutionValues[i]) return true;
+    }
+    return false;
+  }
+
+  /// True when some annotated empty cell's notes exclude the digit it holds in
+  /// the solution — a stronger signal than a merely un-annotated cell, since
+  /// the player has positively ruled out the one digit that must go there.
+  bool _notedCellMissingSolution() {
+    for (var i = 0; i < cellCount; i++) {
+      if (entries[i] != 0 || candidates[i] == 0) continue;
+      if (!maskHas(candidates[i], solutionValues[i])) return true;
+    }
+    return false;
   }
 
   /// True when every empty cell's notes already include the digit it will hold

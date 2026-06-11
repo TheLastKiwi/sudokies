@@ -7,13 +7,15 @@ import 'package:sudokies/data/history_store.dart';
 import 'package:sudokies/data/puzzle.dart';
 import 'package:sudokies/data/technique_library.dart';
 import 'package:sudokies/engine/grid.dart';
+import 'package:sudokies/engine/hint.dart';
+import 'package:sudokies/engine/step.dart';
 import 'package:sudokies/state/game_state.dart';
 import 'package:sudokies/state/settings.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<GameState> loadGame() async {
+  Future<GameState> loadGame({String difficulty = 'easy'}) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final settings = Settings(prefs);
@@ -22,7 +24,7 @@ void main() {
     final raw = await rootBundle.loadString('assets/puzzles/starter.json');
     final json = jsonDecode(raw) as Map<String, dynamic>;
     final puzzles = json['puzzles'] as Map<String, dynamic>;
-    final first = (puzzles.values.first as List).first;
+    final first = (puzzles[difficulty] as List).first;
     final puz = Puzzle.fromJson(Map<String, dynamic>.from(first as Map));
     return GameState(
       puzzle: puz,
@@ -78,5 +80,71 @@ void main() {
 
     expect(game.hintView, isNotNull);
     expect(game.hintView!.strategyName, 'Missing required candidates');
+  });
+
+  test('a wrong entry blocks hints and is reported', () async {
+    final game = await loadGame();
+    game.toggleNotesFill(); // full valid notes: a technique would be visible
+    final cell =
+        List.generate(cellCount, (i) => i).firstWhere((i) => game.entries[i] == 0);
+    final wrong = game.solutionValues[cell] == 9 ? 1 : 9;
+    game.selectCell(cell);
+    game.setMode(EntryMode.fill);
+    game.inputDigit(wrong);
+    game.requestHint();
+    expect(game.hintView, isNotNull);
+    expect(game.hintView!.strategyName, 'Incorrect entry');
+    expect(game.hintView!.canApply, isFalse);
+  });
+
+  test('a noted cell missing its solution digit blocks an otherwise visible hint',
+      () async {
+    final game = await loadGame();
+    game.toggleNotesFill(); // full valid notes: a technique would be visible
+    final cell =
+        List.generate(cellCount, (i) => i).firstWhere((i) => game.entries[i] == 0);
+    game.selectCell(cell);
+    game.setMode(EntryMode.candidate);
+    game.inputDigit(game.solutionValues[cell]); // toggle the true digit off
+    game.requestHint();
+    expect(game.hintView, isNotNull);
+    expect(game.hintView!.strategyName, 'Missing required candidates');
+  });
+
+  test('partially noted boards ask for more notes before hinting', () async {
+    final game = await loadGame();
+    // Note a single cell correctly (its solution digit); the rest stay empty.
+    final cell =
+        List.generate(cellCount, (i) => i).firstWhere((i) => game.entries[i] == 0);
+    game.selectCell(cell);
+    game.setMode(EntryMode.candidate);
+    game.inputDigit(game.solutionValues[cell]);
+    game.requestHint();
+    expect(game.hintView, isNotNull);
+    expect(game.hintView!.strategyName, 'Add more notes');
+  });
+
+  test('noteRemovalHint finds a within-tier elimination of existing notes',
+      () async {
+    final game = await loadGame(difficulty: 'medium');
+    // A medium rating means the solve line contains a medium technique, and
+    // all medium techniques are eliminations — so with full basic notes the
+    // replay must find an elimination of the player's notes within tier.
+    final notes = CandidateGrid.fromValues(game.entries).cands;
+    final step = noteRemovalHint(game.entries, notes, Difficulty.medium);
+    expect(step, isNotNull);
+    expect(step!.eliminations, isNotEmpty);
+    expect(tierForRank(step.difficultyRank).index,
+        lessThanOrEqualTo(Difficulty.medium.index));
+    expect(
+      step.eliminations.any((e) => maskHas(notes[e.cell], e.digit)),
+      isTrue,
+    );
+  });
+
+  test('noteRemovalHint returns null when no notes can be removed', () async {
+    final game = await loadGame();
+    final empty = List<int>.filled(cellCount, 0);
+    expect(noteRemovalHint(game.entries, empty, Difficulty.extreme), isNull);
   });
 }
