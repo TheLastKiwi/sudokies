@@ -8,24 +8,25 @@ class ControlsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // The auto toggle lives on its own line so the circular buttons keep the
+    // full width and never wrap on narrow phones.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 4,
-            children: [
-              _btn(Icons.undo, 'Undo', game.canUndo ? game.undo : null),
-              _btn(Icons.redo, 'Redo', game.canRedo ? game.redo : null),
-              _btn(Icons.edit_note, 'Notes fill', game.toggleNotesFill,
-                  active: game.notesFillActive),
-              _btn(Icons.lightbulb_outline, 'Hint', game.requestHint),
-              _btn(Icons.checklist, 'Check', () => _check(context)),
-              _btn(Icons.restart_alt, 'Reset', () => _confirmReset(context)),
-            ],
-          ),
-        ),
         _autoToggle(),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 4,
+          children: [
+            _btn(Icons.undo, 'Undo', game.canUndo ? game.undo : null),
+            _btn(Icons.redo, 'Redo', game.canRedo ? game.redo : null),
+            _btn(Icons.edit_note, 'Notes fill', game.toggleNotesFill,
+                active: game.notesFillActive),
+            _btn(Icons.lightbulb_outline, 'Hint', game.requestHint),
+            _btn(Icons.checklist, 'Check', () => _check(context)),
+            _btn(Icons.restart_alt, 'Reset', () => _confirmReset(context)),
+          ],
+        ),
       ],
     );
   }
@@ -37,6 +38,8 @@ class ControlsBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.auto_fix_high, size: 18),
+          const SizedBox(width: 4),
+          const Text('Auto entry', style: TextStyle(fontSize: 12)),
           Transform.scale(
             scale: 0.75,
             child: Switch(
