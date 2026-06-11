@@ -20,17 +20,69 @@ Color roleColor(HighlightRole role) {
   }
 }
 
+/// Board palette, with a variant per brightness. Resolve the active one with
+/// [BoardColors.of].
 class BoardColors {
-  static const given = Color(0xFF1A1A1A);
-  static const entry = Color(0xFF1565C0);
-  static const wrong = Color(0xFFD32F2F);
-  static const selected = Color(0xFFBBDEFB);
-  static const peer = Color(0xFFE8F0FE);
-  static const sameDigit = Color(0xFFC5E1A5);
-  static const sameDigitNote = Color(0xFFECF5DF);
-  static const gridLine = Color(0xFF90A4AE);
-  static const gridLineThick = Color(0xFF37474F);
-  static const pencil = Color(0xFF607D8B);
+  final Color cell;
+  final Color given;
+  final Color entry;
+  final Color wrong;
+  final Color selected;
+  final Color peer;
+  final Color sameDigit;
+  final Color sameDigitNote;
+  final Color gridLine;
+  final Color gridLineThick;
+  final Color pencil;
+  final Color pencilHighlight;
+
+  const BoardColors({
+    required this.cell,
+    required this.given,
+    required this.entry,
+    required this.wrong,
+    required this.selected,
+    required this.peer,
+    required this.sameDigit,
+    required this.sameDigitNote,
+    required this.gridLine,
+    required this.gridLineThick,
+    required this.pencil,
+    required this.pencilHighlight,
+  });
+
+  static const light = BoardColors(
+    cell: Colors.white,
+    given: Color(0xFF1A1A1A),
+    entry: Color(0xFF1565C0),
+    wrong: Color(0xFFD32F2F),
+    selected: Color(0xFFBBDEFB),
+    peer: Color(0xFFE8F0FE),
+    sameDigit: Color(0xFFC5E1A5),
+    sameDigitNote: Color(0xFFECF5DF),
+    gridLine: Color(0xFF90A4AE),
+    gridLineThick: Color(0xFF37474F),
+    pencil: Color(0xFF607D8B),
+    pencilHighlight: Colors.black,
+  );
+
+  static const dark = BoardColors(
+    cell: Color(0xFF1E1E1E),
+    given: Color(0xFFECEFF1),
+    entry: Color(0xFF90CAF9),
+    wrong: Color(0xFFEF9A9A),
+    selected: Color(0xFF1E4976),
+    peer: Color(0xFF263238),
+    sameDigit: Color(0xFF33691E),
+    sameDigitNote: Color(0xFF253420),
+    gridLine: Color(0xFF546E7A),
+    gridLineThick: Color(0xFFB0BEC5),
+    pencil: Color(0xFF90A4AE),
+    pencilHighlight: Colors.white,
+  );
+
+  static BoardColors of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
 }
 
 ThemeData buildTheme() {

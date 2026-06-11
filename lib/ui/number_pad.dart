@@ -20,29 +20,11 @@ class NumberPad extends StatelessWidget {
       children: [
         _modeToggle(context),
         const SizedBox(height: 8),
-        _autoToggle(context),
-        const SizedBox(height: 8),
         Row(
           children: [
             for (var d = 1; d <= 9; d++)
               Expanded(child: _digit(context, d)),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _autoToggle(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.auto_fix_high, size: 18),
-        const SizedBox(width: 8),
-        const Expanded(
-          child: Text('Auto entry — pick a number, then tap cells to fill'),
-        ),
-        Switch(
-          value: game.autoEntry,
-          onChanged: (_) => game.toggleAutoEntry(),
         ),
       ],
     );

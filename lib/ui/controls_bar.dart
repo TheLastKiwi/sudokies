@@ -8,18 +8,45 @@ class ControlsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 4,
+    return Row(
       children: [
-        _btn(Icons.undo, 'Undo', game.canUndo ? game.undo : null),
-        _btn(Icons.redo, 'Redo', game.canRedo ? game.redo : null),
-        _btn(Icons.edit_note, 'Notes fill', game.toggleNotesFill,
-            active: game.notesFillActive),
-        _btn(Icons.lightbulb_outline, 'Hint', game.requestHint),
-        _btn(Icons.checklist, 'Check', () => _check(context)),
-        _btn(Icons.restart_alt, 'Reset', () => _confirmReset(context)),
+        Expanded(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 4,
+            children: [
+              _btn(Icons.undo, 'Undo', game.canUndo ? game.undo : null),
+              _btn(Icons.redo, 'Redo', game.canRedo ? game.redo : null),
+              _btn(Icons.edit_note, 'Notes fill', game.toggleNotesFill,
+                  active: game.notesFillActive),
+              _btn(Icons.lightbulb_outline, 'Hint', game.requestHint),
+              _btn(Icons.checklist, 'Check', () => _check(context)),
+              _btn(Icons.restart_alt, 'Reset', () => _confirmReset(context)),
+            ],
+          ),
+        ),
+        _autoToggle(),
       ],
+    );
+  }
+
+  Widget _autoToggle() {
+    return Tooltip(
+      message: 'Auto entry',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.auto_fix_high, size: 18),
+          Transform.scale(
+            scale: 0.75,
+            child: Switch(
+              value: game.autoEntry,
+              onChanged: (_) => game.toggleAutoEntry(),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

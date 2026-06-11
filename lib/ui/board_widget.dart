@@ -70,11 +70,13 @@ class BoardWidget extends StatelessWidget {
       candByCell.putIfAbsent(m.cell, () => []).add(m);
     }
 
+    final colors = BoardColors.of(context);
+
     return AspectRatio(
       aspectRatio: 1,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: BoardColors.gridLineThick, width: 2),
+          border: Border.all(color: colors.gridLineThick, width: 2),
         ),
         child: Column(
           children: [
@@ -87,6 +89,7 @@ class BoardWidget extends StatelessWidget {
                       Expanded(
                         child: _cell(
                           r * 9 + c,
+                          colors,
                           peerSet,
                           sameDigitSet,
                           sameNoteSet,
@@ -104,40 +107,41 @@ class BoardWidget extends StatelessWidget {
 
   Widget _cell(
     int i,
+    BoardColors colors,
     Set<int> peerSet,
     Set<int> sameDigitSet,
     Set<int> sameNoteSet,
     Map<int, List<CandidateMark>> candByCell,
   ) {
     final r = rowOf(i), c = colOf(i);
-    Color bg = Colors.white;
+    Color bg = colors.cell;
     if (roleCells.containsKey(i)) {
       bg = roleColor(roleCells[i]!).withOpacity(0.35);
     } else if (i == selectedCell) {
-      bg = BoardColors.selected;
+      bg = colors.selected;
     } else if (sameDigitSet.contains(i)) {
-      bg = BoardColors.sameDigit;
+      bg = colors.sameDigit;
     } else if (sameNoteSet.contains(i)) {
-      bg = BoardColors.sameDigitNote;
+      bg = colors.sameDigitNote;
     } else if (peerSet.contains(i)) {
-      bg = BoardColors.peer;
+      bg = colors.peer;
     }
 
     final border = Border(
       top: BorderSide(
-        color: r % 3 == 0 ? BoardColors.gridLineThick : BoardColors.gridLine,
+        color: r % 3 == 0 ? colors.gridLineThick : colors.gridLine,
         width: r % 3 == 0 ? 1.5 : 0.5,
       ),
       left: BorderSide(
-        color: c % 3 == 0 ? BoardColors.gridLineThick : BoardColors.gridLine,
+        color: c % 3 == 0 ? colors.gridLineThick : colors.gridLine,
         width: c % 3 == 0 ? 1.5 : 0.5,
       ),
       right: BorderSide(
-        color: c == 8 ? BoardColors.gridLineThick : Colors.transparent,
+        color: c == 8 ? colors.gridLineThick : Colors.transparent,
         width: c == 8 ? 1.5 : 0,
       ),
       bottom: BorderSide(
-        color: r == 8 ? BoardColors.gridLineThick : Colors.transparent,
+        color: r == 8 ? colors.gridLineThick : Colors.transparent,
         width: r == 8 ? 1.5 : 0,
       ),
     );
@@ -146,12 +150,12 @@ class BoardWidget extends StatelessWidget {
       onTap: (interactive && onTapCell != null) ? () => onTapCell!(i) : null,
       child: Container(
         decoration: BoxDecoration(color: bg, border: border),
-        child: hideContent ? null : _content(i, candByCell[i]),
+        child: hideContent ? null : _content(i, colors, candByCell[i]),
       ),
     );
   }
 
-  Widget _content(int i, List<CandidateMark>? marks) {
+  Widget _content(int i, BoardColors colors, List<CandidateMark>? marks) {
     final v = values[i];
     if (v != 0) {
       final isGiven = givens[i] != 0;
@@ -165,8 +169,8 @@ class BoardWidget extends StatelessWidget {
               style: TextStyle(
                 fontWeight: isGiven ? FontWeight.bold : FontWeight.w500,
                 color: isWrong
-                    ? BoardColors.wrong
-                    : (isGiven ? BoardColors.given : BoardColors.entry),
+                    ? colors.wrong
+                    : (isGiven ? colors.given : colors.entry),
               ),
             ),
           ),
@@ -193,7 +197,8 @@ class BoardWidget extends StatelessWidget {
               child: Row(
                 children: [
                   for (var bc = 0; bc < 3; bc++)
-                    Expanded(child: _pencil(br * 3 + bc + 1, mask, markRole)),
+                    Expanded(
+                        child: _pencil(br * 3 + bc + 1, colors, mask, markRole)),
                 ],
               ),
             ),
@@ -202,7 +207,8 @@ class BoardWidget extends StatelessWidget {
     );
   }
 
-  Widget _pencil(int d, int mask, Map<int, HighlightRole> markRole) {
+  Widget _pencil(
+      int d, BoardColors colors, int mask, Map<int, HighlightRole> markRole) {
     final present = maskHas(mask, d);
     final role = markRole[d];
     if (!present && role == null) return const SizedBox.shrink();
@@ -220,7 +226,7 @@ class BoardWidget extends StatelessWidget {
           child: Text(
             '$d',
             style: TextStyle(
-              color: highlighted ? Colors.black : BoardColors.pencil,
+              color: highlighted ? colors.pencilHighlight : colors.pencil,
               fontWeight: highlighted ? FontWeight.bold : FontWeight.normal,
             ),
           ),
