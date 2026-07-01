@@ -5,6 +5,7 @@ import 'package:sudokies/engine/brute_solver.dart';
 import 'package:sudokies/engine/constraints/constraint.dart';
 import 'package:sudokies/engine/constraints/killer_cage.dart';
 import 'package:sudokies/engine/grid.dart';
+import 'package:sudokies/engine/hint.dart';
 import 'package:sudokies/engine/solver.dart';
 import 'package:sudokies/engine/step.dart';
 import 'package:sudokies/engine/strategies/killer.dart';
@@ -148,6 +149,20 @@ void main() {
     test('adding the constraints field leaves classic solving unchanged', () {
       final result = solveLogically(easy);
       expect(result.solved, true);
+    });
+  });
+
+  group('hint plumbing', () {
+    test('nextHint threads constraints so a cage fires where classic is stuck',
+        () {
+      final values = List<int>.filled(81, 0);
+      final notes = List<int>.filled(81, allMask);
+      // An empty, fully-noted board exposes no classic technique...
+      expect(nextHint(values, notes), isNull);
+      // ...but a cage's sum combinations do make progress.
+      final step = nextHint(values, notes, const [KillerCage([0, 21], 5)]);
+      expect(step, isNotNull);
+      expect(step!.strategyId, 'killer_cage_sums');
     });
   });
 

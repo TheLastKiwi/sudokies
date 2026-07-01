@@ -7,6 +7,7 @@ import '../data/history_record.dart';
 import '../data/history_store.dart';
 import '../data/puzzle.dart';
 import '../data/technique_library.dart';
+import '../engine/constraints/constraint.dart';
 import '../engine/grid.dart';
 import '../engine/hint.dart';
 import '../engine/step.dart';
@@ -66,6 +67,11 @@ class GameState extends ChangeNotifier {
   /// The currently active note layer. Reads and edits flow to this list, so
   /// existing UI and hint code transparently see the layer the player chose.
   List<int> get candidates => notesFillActive ? _auto : _manual;
+
+  /// Variant constraints for this puzzle (empty for classic). Passed to the
+  /// hint engine so cage/line/etc. techniques surface alongside the classic
+  /// ones.
+  List<Constraint> get _constraints => puzzle.variant?.constraints ?? const [];
 
   int? selectedCell;
   EntryMode mode = EntryMode.fill;
@@ -377,7 +383,7 @@ class GameState extends ChangeNotifier {
           );
           return;
         }
-        var step = nextHint(entries, candidates);
+        var step = nextHint(entries, candidates, _constraints);
         if (step == null) {
           _showMessageHint(
             name: 'Add more notes',
@@ -397,12 +403,13 @@ class GameState extends ChangeNotifier {
           // removes some of the player's existing notes; failing that, if a
           // fuller candidate grid would reveal a strictly easier technique,
           // nudge them to add notes rather than teach the hard one.
-          final removal = noteRemovalHint(entries, candidates, puzzle.difficulty);
+          final removal =
+              noteRemovalHint(entries, candidates, puzzle.difficulty, _constraints);
           if (removal != null) {
             step = removal;
             info = library.byId(step.strategyId);
           } else {
-            final fullStep = nextHint(entries);
+            final fullStep = nextHint(entries, null, _constraints);
             final fullTier = fullStep == null
                 ? null
                 : (library.byId(fullStep.strategyId)?.tier ??

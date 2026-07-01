@@ -79,15 +79,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _enterCode() async {
     final controller = TextEditingController();
-    final code = await showDialog<String>(
+    final input = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Enter share code'),
+        title: const Text('Enter code or share string'),
         content: TextField(
           controller: controller,
           autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(hintText: '6-character code'),
+          decoration: const InputDecoration(
+              hintText: '6-character code or shared puzzle'),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
@@ -99,10 +99,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-    if (code == null || code.trim().isEmpty) return;
+    final text = input?.trim() ?? '';
+    if (text.isEmpty) return;
+
+    // A pasted variant puzzle is self-contained — decode it directly rather
+    // than looking it up in the code-based bank.
+    if (text.startsWith('SUDOKIES1:')) {
+      try {
+        final puzzle = Puzzle.decode(text);
+        if (!mounted) return;
+        await _open(_gameFor(puzzle));
+      } catch (_) {
+        _showError('That shared puzzle could not be read.');
+      }
+      return;
+    }
+
     setState(() => _loading = true);
     try {
-      final puzzle = await services.repository.byCode(code);
+      final puzzle = await services.repository.byCode(text.toUpperCase());
       if (!mounted) return;
       await _open(_gameFor(puzzle));
     } on PuzzleNotFound catch (e) {

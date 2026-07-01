@@ -124,6 +124,7 @@ class _GameScreenState extends State<GameScreen> {
                                 wrongCells: _wrongCells(),
                                 hideContent: game.paused,
                                 onTapCell: game.selectCell,
+                                variant: game.puzzle.variant,
                               ),
                               const SizedBox(height: 16),
                               ControlsBar(game: game),
@@ -158,7 +159,10 @@ class _GameScreenState extends State<GameScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(game.puzzle.difficulty.label,
+              Text(
+                  game.puzzle.isVariant
+                      ? '${game.puzzle.variant!.name} (${game.puzzle.difficulty.label})'
+                      : game.puzzle.difficulty.label,
                   style: Theme.of(context).textTheme.titleMedium),
               InkWell(
                 onTap: _copyCode,
@@ -222,9 +226,16 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _copyCode() {
-    Clipboard.setData(ClipboardData(text: game.puzzle.code));
+    // Variant puzzles can't be looked up by a short code, so share the whole
+    // self-contained encoded string; classic puzzles share their 6-char code.
+    final isVariant = game.puzzle.isVariant;
+    Clipboard.setData(ClipboardData(
+        text: isVariant ? game.puzzle.encode() : game.puzzle.code));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Copied code ${game.puzzle.code}')),
+      SnackBar(
+          content: Text(isVariant
+              ? 'Copied share code to clipboard'
+              : 'Copied code ${game.puzzle.code}')),
     );
   }
 }

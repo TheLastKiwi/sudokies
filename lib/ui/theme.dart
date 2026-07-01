@@ -36,6 +36,9 @@ class BoardColors {
   final Color pencil;
   final Color pencilHighlight;
 
+  /// Dashed cage outlines and sum labels for variant (killer) overlays.
+  final Color cage;
+
   const BoardColors({
     required this.cell,
     required this.given,
@@ -49,6 +52,7 @@ class BoardColors {
     required this.gridLineThick,
     required this.pencil,
     required this.pencilHighlight,
+    required this.cage,
   });
 
   static const light = BoardColors(
@@ -64,6 +68,7 @@ class BoardColors {
     gridLineThick: Color(0xFF37474F),
     pencil: Color(0xFF607D8B),
     pencilHighlight: Colors.black,
+    cage: Color(0xFF455A64),
   );
 
   static const dark = BoardColors(
@@ -79,6 +84,7 @@ class BoardColors {
     gridLineThick: Color(0xFFB0BEC5),
     pencil: Color(0xFF90A4AE),
     pencilHighlight: Colors.white,
+    cage: Color(0xFFCFD8DC),
   );
 
   static BoardColors of(BuildContext context) =>

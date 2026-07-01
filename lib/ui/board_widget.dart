@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/variant_spec.dart';
 import '../engine/grid.dart';
 import '../engine/step.dart';
+import 'constraint_overlay.dart';
 import 'theme.dart';
 
 /// Renders a 9x9 board. Used for live play (interactive, selection-based
@@ -23,6 +25,9 @@ class BoardWidget extends StatelessWidget {
   final bool hideContent;
   final void Function(int cell)? onTapCell;
 
+  /// Variant rules to draw over the grid (killer cages, …). Null for classic.
+  final VariantSpec? variant;
+
   const BoardWidget({
     super.key,
     required this.values,
@@ -36,6 +41,7 @@ class BoardWidget extends StatelessWidget {
     this.interactive = true,
     this.hideContent = false,
     this.onTapCell,
+    this.variant,
   });
 
   @override
@@ -72,35 +78,54 @@ class BoardWidget extends StatelessWidget {
 
     final colors = BoardColors.of(context);
 
+    final grid = Column(
+      children: [
+        for (var r = 0; r < 9; r++)
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var c = 0; c < 9; c++)
+                  Expanded(
+                    child: _cell(
+                      r * 9 + c,
+                      colors,
+                      peerSet,
+                      sameDigitSet,
+                      sameNoteSet,
+                      candByCell,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+
     return AspectRatio(
       aspectRatio: 1,
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(color: colors.gridLineThick, width: 2),
         ),
-        child: Column(
-          children: [
-            for (var r = 0; r < 9; r++)
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var c = 0; c < 9; c++)
-                      Expanded(
-                        child: _cell(
-                          r * 9 + c,
-                          colors,
-                          peerSet,
-                          sameDigitSet,
-                          sameNoteSet,
-                          candByCell,
+        child: variant == null
+            ? grid
+            : Stack(
+                fit: StackFit.expand,
+                children: [
+                  grid,
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: ConstraintOverlayPainter(
+                          variant: variant!,
+                          color: colors.cage,
                         ),
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
-          ],
-        ),
       ),
     );
   }
