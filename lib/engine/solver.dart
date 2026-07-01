@@ -2,6 +2,7 @@
 /// required. Applies techniques cheapest-first, restarting after each move.
 library;
 
+import 'constraints/constraint.dart';
 import 'grid.dart';
 import 'step.dart';
 import 'strategies/strategy.dart';
@@ -30,8 +31,9 @@ class SolveResult {
 SolveResult solveLogically(
   String puzzle, {
   void Function(String strategyId, String boardBefore)? onStep,
+  List<Constraint> constraints = const [],
 }) {
-  final g = CandidateGrid.fromString(puzzle);
+  final g = CandidateGrid.fromString(puzzle, constraints: constraints);
   var hardest = -1;
   var steps = 0;
   final usage = <String, int>{};

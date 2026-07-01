@@ -6,6 +6,8 @@
 /// digit `d` (1..9) is still possible. `allMask` (0x1FF) means all nine digits.
 library;
 
+import 'constraints/constraint.dart';
+
 const int cellCount = 81;
 const int allMask = 0x1FF; // 511, bits for digits 1..9
 
@@ -126,10 +128,18 @@ class CandidateGrid {
   final List<int> values;
   final List<int> cands;
 
-  CandidateGrid._(this.values, this.cands);
+  /// Variant rules layered on the classic row/col/box constraints. Empty for a
+  /// classic puzzle, in which case the variant strategies short-circuit and the
+  /// grid behaves exactly as before.
+  final List<Constraint> constraints;
+
+  CandidateGrid._(this.values, this.cands, [this.constraints = const []]);
 
   /// Build from an 81-char puzzle string. Blanks may be '.', '0' or ' '.
-  factory CandidateGrid.fromString(String puzzle) {
+  factory CandidateGrid.fromString(
+    String puzzle, {
+    List<Constraint> constraints = const [],
+  }) {
     final values = List<int>.filled(cellCount, 0);
     final cleaned = puzzle.replaceAll(RegExp(r'\s'), '');
     if (cleaned.length != cellCount) {
@@ -144,21 +154,31 @@ class CandidateGrid {
       }
       values[i] = d;
     }
-    final grid = CandidateGrid._(values, List<int>.filled(cellCount, 0));
+    final grid =
+        CandidateGrid._(values, List<int>.filled(cellCount, 0), constraints);
     grid.recomputeBasicCandidates();
     return grid;
   }
 
   /// Build from explicit values and player-supplied candidate masks (a copy).
-  factory CandidateGrid.fromState(List<int> values, List<int> cands) {
-    return CandidateGrid._(List<int>.from(values), List<int>.from(cands));
+  factory CandidateGrid.fromState(
+    List<int> values,
+    List<int> cands, {
+    List<Constraint> constraints = const [],
+  }) {
+    return CandidateGrid._(
+        List<int>.from(values), List<int>.from(cands), constraints);
   }
 
   /// Build from placed values only, deriving basic (row/col/box) candidates.
-  factory CandidateGrid.fromValues(List<int> values) {
+  factory CandidateGrid.fromValues(
+    List<int> values, {
+    List<Constraint> constraints = const [],
+  }) {
     final g = CandidateGrid._(
       List<int>.from(values),
       List<int>.filled(cellCount, 0),
+      constraints,
     );
     g.recomputeBasicCandidates();
     return g;
@@ -167,6 +187,7 @@ class CandidateGrid {
   CandidateGrid clone() => CandidateGrid._(
         List<int>.from(values),
         List<int>.from(cands),
+        constraints,
       );
 
   /// Reset every empty cell's candidates to the basic set implied by peers'

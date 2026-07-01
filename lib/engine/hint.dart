@@ -4,6 +4,7 @@
 /// surfaces once enough notes are present for it to be visible to the player.
 library;
 
+import 'constraints/constraint.dart';
 import 'grid.dart';
 import 'step.dart';
 import 'strategies/strategy.dart';
@@ -15,8 +16,12 @@ import 'strategies/strategy.dart';
 /// placed peer already rules out. Empty cells the player hasn't annotated have
 /// no candidates, so no technique applies until they add notes. Returns null if
 /// no technique applies.
-SolveStep? nextHint(List<int> values, [List<int>? notes]) {
-  final g = CandidateGrid.fromValues(values);
+SolveStep? nextHint(
+  List<int> values, [
+  List<int>? notes,
+  List<Constraint> constraints = const [],
+]) {
+  final g = CandidateGrid.fromValues(values, constraints: constraints);
   if (notes != null) {
     for (var i = 0; i < cellCount; i++) {
       if (values[i] == 0) g.cands[i] &= notes[i];
@@ -37,8 +42,13 @@ SolveStep? nextHint(List<int> values, [List<int>? notes]) {
 /// [notes]: a strategy the player can apply right now to clean up existing
 /// notes. Returns null if the replay gets stuck or solves the board without
 /// ever eliminating one of the player's notes within the tier cap.
-SolveStep? noteRemovalHint(List<int> values, List<int> notes, Difficulty maxTier) {
-  final g = CandidateGrid.fromValues(values);
+SolveStep? noteRemovalHint(
+  List<int> values,
+  List<int> notes,
+  Difficulty maxTier, [
+  List<Constraint> constraints = const [],
+]) {
+  final g = CandidateGrid.fromValues(values, constraints: constraints);
   const maxSteps = 81 * 9 + 81;
   for (var steps = 0; steps < maxSteps && !g.isSolved; steps++) {
     SolveStep? step;
@@ -70,9 +80,10 @@ SolveStep? noteRemovalHint(List<int> values, List<int> notes, Difficulty maxTier
 /// the reduced grid at that moment.
 ({SolveStep? step, List<int> candidates}) runStrategyExample(
   String strategyId,
-  List<int> values,
-) {
-  final g = CandidateGrid.fromValues(values);
+  List<int> values, [
+  List<Constraint> constraints = const [],
+]) {
+  final g = CandidateGrid.fromValues(values, constraints: constraints);
   const maxSteps = 81 * 9 + 81;
   for (var steps = 0; steps < maxSteps && !g.isSolved; steps++) {
     SolveStep? step;

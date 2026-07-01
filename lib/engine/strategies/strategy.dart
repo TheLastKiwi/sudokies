@@ -12,6 +12,7 @@ import 'fish.dart';
 import 'wings.dart';
 import 'colouring.dart';
 import 'unique_rectangle.dart';
+import 'killer.dart';
 
 typedef ApplyFn = SolveStep? Function(CandidateGrid grid);
 
@@ -197,6 +198,37 @@ final List<Strategy> allStrategies = [
         'A 4x4 fish: a digit confined to four columns across four rows lets '
         'you eliminate it elsewhere in those columns.',
     apply: jellyfish,
+  ),
+  // ---- Variant: Killer Sudoku ----
+  // These short-circuit on classic (constraint-free) grids, so they add no
+  // behaviour there; they only fire when a puzzle carries killer cages.
+  Strategy(
+    id: 'killer_last_cell',
+    name: 'Cage Last Cell',
+    rank: 3,
+    description:
+        'A killer cage with one empty cell must hold the digit that makes the '
+        'cage reach its target sum.',
+    apply: killerLastCell,
+  ),
+  Strategy(
+    id: 'killer_no_repeat',
+    name: 'Cage No-Repeat',
+    rank: 6,
+    description:
+        'A killer cage never repeats a digit, so a digit already placed in the '
+        'cage can be removed from its other cells.',
+    apply: killerNoRepeat,
+  ),
+  Strategy(
+    id: 'killer_cage_sums',
+    name: 'Cage Sum Combinations',
+    rank: 15,
+    description:
+        'The empty cells of a killer cage must form a distinct-digit '
+        'combination summing to the remaining total. Digits in no valid '
+        'combination can be removed.',
+    apply: killerCageSums,
   ),
 ]..sort((a, b) => a.rank.compareTo(b.rank));
 
