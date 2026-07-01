@@ -10,7 +10,9 @@
 /// several separately-ranked techniques.
 library;
 
+import 'arrow.dart';
 import 'killer_cage.dart';
+import 'thermometer.dart';
 
 /// A single variant rule attached to a puzzle.
 abstract class Constraint {
@@ -40,6 +42,10 @@ Constraint constraintFromJson(Map<String, dynamic> json) {
   switch (type) {
     case 'killer_cage':
       return KillerCage.fromJson(json);
+    case 'thermometer':
+      return Thermometer.fromJson(json);
+    case 'arrow':
+      return Arrow.fromJson(json);
     default:
       throw ArgumentError('Unknown constraint type "$type"');
   }

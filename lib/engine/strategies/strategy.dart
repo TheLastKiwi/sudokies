@@ -13,6 +13,7 @@ import 'wings.dart';
 import 'colouring.dart';
 import 'unique_rectangle.dart';
 import 'killer.dart';
+import 'thermo_arrow.dart';
 
 typedef ApplyFn = SolveStep? Function(CandidateGrid grid);
 
@@ -229,6 +230,25 @@ final List<Strategy> allStrategies = [
         'combination summing to the remaining total. Digits in no valid '
         'combination can be removed.',
     apply: killerCageSums,
+  ),
+  // ---- Variant: Thermometer / Arrow ----
+  Strategy(
+    id: 'thermometer',
+    name: 'Thermometer',
+    rank: 9,
+    description:
+        'Digits strictly increase from a thermometer\'s bulb to its tip, so '
+        'each cell is bounded by how many cells lie before and after it.',
+    apply: thermometer,
+  ),
+  Strategy(
+    id: 'arrow',
+    name: 'Arrow Sum',
+    rank: 16,
+    description:
+        'The digits along an arrow sum to the number on its bulb, bounding '
+        'both the bulb and the path cells.',
+    apply: arrow,
   ),
 ]..sort((a, b) => a.rank.compareTo(b.rank));
 

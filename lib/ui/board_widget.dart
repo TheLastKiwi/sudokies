@@ -119,7 +119,8 @@ class BoardWidget extends StatelessWidget {
                       child: CustomPaint(
                         painter: ConstraintOverlayPainter(
                           variant: variant!,
-                          color: colors.cage,
+                          cageColor: colors.cage,
+                          lineColor: colors.line,
                         ),
                       ),
                     ),

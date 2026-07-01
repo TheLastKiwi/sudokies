@@ -4,6 +4,7 @@ import 'package:sudokies/data/custom_puzzle_store.dart';
 import 'package:sudokies/data/puzzle.dart';
 import 'package:sudokies/data/variant_spec.dart';
 import 'package:sudokies/engine/brute_solver.dart';
+import 'package:sudokies/engine/constraints/arrow.dart';
 import 'package:sudokies/engine/constraints/killer_cage.dart';
 import 'package:sudokies/engine/step.dart';
 import 'package:sudokies/state/editor_state.dart';
@@ -22,14 +23,14 @@ void main() {
   group('EditorState.addCage', () {
     test('rejects fewer than two cells', () {
       final e = EditorState();
-      e.pendingCage.add(0);
+      e.pending.add(0);
       expect(e.addCage(5), isNotNull);
       expect(e.cages, isEmpty);
     });
 
     test('rejects an unreachable sum', () {
       final e = EditorState();
-      e.pendingCage.addAll([0, 1]); // two cells: min 3, max 17
+      e.pending.addAll([0, 1]); // two cells: min 3, max 17
       expect(e.addCage(2), isNotNull);
       expect(e.addCage(18), isNotNull);
       expect(e.cages, isEmpty);
@@ -37,12 +38,41 @@ void main() {
 
     test('commits a valid cage and clears the pending selection', () {
       final e = EditorState();
-      e.pendingCage.addAll([0, 1, 2]);
+      e.pending.addAll([0, 1, 2]);
       expect(e.addCage(12), isNull);
       expect(e.cages, hasLength(1));
       expect(e.cages.single.cells, [0, 1, 2]);
       expect(e.cages.single.sum, 12);
-      expect(e.pendingCage, isEmpty);
+      expect(e.pending, isEmpty);
+    });
+  });
+
+  group('EditorState line tools', () {
+    test('addThermo commits an ordered path', () {
+      final e = EditorState();
+      e.setTool(EditorTool.thermo);
+      e.pending.addAll([0, 30, 60]);
+      expect(e.addThermo(), isNull);
+      expect(e.constraints, hasLength(1));
+      expect(e.constraints.single.type, 'thermometer');
+    });
+
+    test('addArrow uses the first cell as the bulb', () {
+      final e = EditorState();
+      e.setTool(EditorTool.arrow);
+      e.pending.addAll([0, 30, 60]);
+      expect(e.addArrow(), isNull);
+      final arrow = e.constraints.single as Arrow;
+      expect(arrow.bulb, [0]);
+      expect(arrow.path, [30, 60]);
+    });
+
+    test('line tools reject a single cell', () {
+      final e = EditorState();
+      e.pending.add(0);
+      expect(e.addThermo(), isNotNull);
+      expect(e.addArrow(), isNotNull);
+      expect(e.constraints, isEmpty);
     });
   });
 
@@ -50,7 +80,7 @@ void main() {
     test('derives the solution for a solvable design', () {
       final e = EditorState();
       setGivens(e, easy);
-      e.pendingCage.addAll([0, 1, 2]);
+      e.pending.addAll([0, 1, 2]);
       e.addCage(12); // 5+3+4 in the solution
       final puzzle = e.buildPuzzle('My Killer');
       expect(puzzle, isNotNull);
@@ -62,7 +92,7 @@ void main() {
     test('fails and explains when the design is unsolvable', () {
       final e = EditorState();
       // No givens, one loose cage — not solvable by the techniques.
-      e.pendingCage.addAll([0, 1]);
+      e.pending.addAll([0, 1]);
       e.addCage(5);
       final puzzle = e.buildPuzzle('Nope');
       expect(puzzle, isNull);

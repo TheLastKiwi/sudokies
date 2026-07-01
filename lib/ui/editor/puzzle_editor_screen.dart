@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app.dart';
 import '../../data/puzzle.dart';
+import '../../engine/constraints/killer_cage.dart';
 import '../../engine/grid.dart';
 import '../../engine/step.dart';
 import '../../state/editor_state.dart';
@@ -73,17 +74,16 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
                     selectedCell: editor.selectedCell,
                     variant: editor.liveVariant,
                     roleCells: {
-                      for (final c in editor.pendingCage) c: HighlightRole.base,
+                      for (final c in editor.pending) c: HighlightRole.base,
                     },
                     onTapCell: editor.selectCell,
                   ),
                   const SizedBox(height: 12),
                   _toolSelector(),
                   const SizedBox(height: 12),
-                  if (editor.tool == EditorTool.givens)
-                    _givensPanel()
-                  else
-                    _cagePanel(),
+                  _toolPanel(),
+                  const SizedBox(height: 8),
+                  _constraintChips(),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -102,20 +102,107 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
     );
   }
 
+  static const _toolLabels = {
+    EditorTool.givens: 'Givens',
+    EditorTool.cage: 'Cage',
+    EditorTool.thermo: 'Thermo',
+    EditorTool.arrow: 'Arrow',
+  };
+
   Widget _toolSelector() {
-    return SegmentedButton<EditorTool>(
-      segments: const [
-        ButtonSegment(
-            value: EditorTool.givens,
-            label: Text('Givens'),
-            icon: Icon(Icons.edit)),
-        ButtonSegment(
-            value: EditorTool.cage,
-            label: Text('Cage'),
-            icon: Icon(Icons.crop_free)),
+    return Wrap(
+      spacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        for (final t in EditorTool.values)
+          ChoiceChip(
+            label: Text(_toolLabels[t]!),
+            selected: editor.tool == t,
+            onSelected: (_) => editor.setTool(t),
+          ),
       ],
-      selected: {editor.tool},
-      onSelectionChanged: (s) => editor.setTool(s.first),
+    );
+  }
+
+  Widget _toolPanel() {
+    switch (editor.tool) {
+      case EditorTool.givens:
+        return _givensPanel();
+      case EditorTool.cage:
+        return _cagePanel();
+      case EditorTool.thermo:
+        return _pathPanel(
+          hint: 'Tap cells from the bulb (lowest) to the tip (highest). '
+              'Digits strictly increase.',
+          addLabel: 'Add thermometer',
+          onAdd: () => editor.addThermo(),
+        );
+      case EditorTool.arrow:
+        return _pathPanel(
+          hint: 'Tap the bulb first, then the path cells. The path sums to the '
+              'bulb.',
+          addLabel: 'Add arrow',
+          onAdd: () => editor.addArrow(),
+        );
+    }
+  }
+
+  Widget _pathPanel({
+    required String hint,
+    required String addLabel,
+    required String? Function() onAdd,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(hint, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text('${editor.pending.length} cell(s) selected'),
+            const Spacer(),
+            FilledButton(
+              onPressed: () {
+                final err = onAdd();
+                if (err != null) _snack(err);
+              },
+              child: Text(addLabel),
+            ),
+            const SizedBox(width: 4),
+            TextButton(
+                onPressed: editor.pending.isEmpty ? null : editor.clearPending,
+                child: const Text('Clear')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _constraintChips() {
+    if (editor.constraints.isEmpty) return const SizedBox.shrink();
+    String label(int i) {
+      final c = editor.constraints[i];
+      if (c is KillerCage) return 'Cage ${c.sum} (${c.cells.length})';
+      switch (c.type) {
+        case 'thermometer':
+          return 'Thermo (${c.cells.length})';
+        case 'arrow':
+          return 'Arrow (${c.cells.length})';
+        default:
+          return c.type;
+      }
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (var i = 0; i < editor.constraints.length; i++)
+          InputChip(
+            label: Text(label(i)),
+            onDeleted: () => editor.removeConstraint(i),
+          ),
+      ],
     );
   }
 
@@ -165,8 +252,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Tap cells to group them, enter the cage sum, then Add. '
-          'Tap a caged cell\'s chip to remove it.',
+          'Tap cells to group them, enter the cage sum, then Add.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -180,7 +266,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
                   labelText: 'Sum',
                   isDense: true,
                   border: const OutlineInputBorder(),
-                  helperText: '${editor.pendingCage.length} cell(s) selected',
+                  helperText: '${editor.pending.length} cell(s) selected',
                 ),
               ),
             ),
@@ -188,26 +274,11 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
             FilledButton(onPressed: _addCage, child: const Text('Add cage')),
             const SizedBox(width: 4),
             TextButton(
-                onPressed: editor.pendingCage.isEmpty
-                    ? null
-                    : editor.clearPendingCage,
+                onPressed:
+                    editor.pending.isEmpty ? null : editor.clearPending,
                 child: const Text('Clear')),
           ],
         ),
-        const SizedBox(height: 8),
-        if (editor.cages.isNotEmpty)
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (var i = 0; i < editor.cages.length; i++)
-                InputChip(
-                  label: Text(
-                      '${editor.cages[i].sum} (${editor.cages[i].cells.length})'),
-                  onDeleted: () => editor.removeCage(i),
-                ),
-            ],
-          ),
       ],
     );
   }

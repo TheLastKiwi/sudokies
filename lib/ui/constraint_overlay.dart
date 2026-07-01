@@ -1,31 +1,115 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../data/variant_spec.dart';
+import '../engine/constraints/arrow.dart';
 import '../engine/constraints/killer_cage.dart';
+import '../engine/constraints/thermometer.dart';
 import '../engine/grid.dart';
 
-/// Paints variant-rule decorations (currently killer cages) over the 9x9 cell
-/// grid. The canvas covers exactly the cell area, so a cell of index `i` spans
-/// `(colOf(i)*u, rowOf(i)*u)`..`+u` where `u = size.width / 9`.
+/// Paints variant-rule decorations (killer cages, thermometers, arrows) over the
+/// 9x9 cell grid. The canvas covers exactly the cell area, so a cell of index
+/// `i` spans `(colOf(i)*u, rowOf(i)*u)`..`+u` where `u = size.width / 9`.
 class ConstraintOverlayPainter extends CustomPainter {
   final VariantSpec variant;
-  final Color color;
+  final Color cageColor;
+  final Color lineColor;
 
-  ConstraintOverlayPainter({required this.variant, required this.color});
+  ConstraintOverlayPainter({
+    required this.variant,
+    required this.cageColor,
+    required this.lineColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final u = size.width / 9;
+    // Lines/arrows first so cage outlines and sums stay readable on top.
+    for (final c in variant.constraints) {
+      if (c is Thermometer) _paintThermo(canvas, u, c);
+      if (c is Arrow) _paintArrow(canvas, u, c);
+    }
     for (final cage in variant.constraints.whereType<KillerCage>()) {
       _paintCage(canvas, u, cage);
     }
   }
 
+  Offset _center(double u, int cell) =>
+      Offset((colOf(cell) + 0.5) * u, (rowOf(cell) + 0.5) * u);
+
+  // ---- Thermometer --------------------------------------------------------
+  void _paintThermo(Canvas canvas, double u, Thermometer t) {
+    if (t.path.isEmpty) return;
+    final stroke = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.20
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final p = Path()..moveTo(_center(u, t.path.first).dx, _center(u, t.path.first).dy);
+    for (final c in t.path.skip(1)) {
+      p.lineTo(_center(u, c).dx, _center(u, c).dy);
+    }
+    canvas.drawPath(p, stroke);
+    // Bulb.
+    canvas.drawCircle(
+      _center(u, t.path.first),
+      u * 0.30,
+      Paint()..color = lineColor,
+    );
+  }
+
+  // ---- Arrow --------------------------------------------------------------
+  void _paintArrow(Canvas canvas, double u, Arrow a) {
+    if (a.bulb.isEmpty || a.path.isEmpty) return;
+    final stroke = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.06
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final start = _center(u, a.bulb.first);
+    final points = [start, for (final c in a.path) _center(u, c)];
+    final p = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final pt in points.skip(1)) {
+      p.lineTo(pt.dx, pt.dy);
+    }
+    canvas.drawPath(p, stroke);
+
+    // Hollow bulb circle(s).
+    for (final b in a.bulb) {
+      canvas.drawCircle(
+        _center(u, b),
+        u * 0.30,
+        Paint()
+          ..color = lineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = u * 0.06,
+      );
+    }
+
+    // Arrowhead at the tip along the last segment's direction.
+    final tip = points.last;
+    final prev = points[points.length - 2];
+    final ang = math.atan2(tip.dy - prev.dy, tip.dx - prev.dx);
+    const spread = math.pi / 7;
+    final len = u * 0.26;
+    for (final s in [ang + math.pi - spread, ang + math.pi + spread]) {
+      canvas.drawLine(
+        tip,
+        Offset(tip.dx + len * math.cos(s), tip.dy + len * math.sin(s)),
+        stroke,
+      );
+    }
+  }
+
+  // ---- Killer cage --------------------------------------------------------
   void _paintCage(Canvas canvas, double u, KillerCage cage) {
     final set = cage.cells.toSet();
     final pad = u * 0.09;
     final paint = Paint()
-      ..color = color
+      ..color = cageColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -40,8 +124,6 @@ class ConstraintOverlayPainter extends CustomPainter {
       final leftB = !inCage(r, c - 1);
       final rightB = !inCage(r, c + 1);
 
-      // Each boundary edge is inset by `pad`; where an adjacent perpendicular
-      // edge is also a boundary, the endpoint is pulled in so corners meet.
       if (topB) {
         _dashLine(canvas, paint, Offset(left + (leftB ? pad : 0), top + pad),
             Offset(right - (rightB ? pad : 0), top + pad));
@@ -63,7 +145,6 @@ class ConstraintOverlayPainter extends CustomPainter {
     _paintSum(canvas, u, cage);
   }
 
-  /// Draw the cage total in the corner of its top-left-most cell.
   void _paintSum(Canvas canvas, double u, KillerCage cage) {
     final anchor = cage.cells.reduce((a, b) {
       final ra = rowOf(a), rb = rowOf(b);
@@ -75,7 +156,7 @@ class ConstraintOverlayPainter extends CustomPainter {
       text: TextSpan(
         text: '${cage.sum}',
         style: TextStyle(
-          color: color,
+          color: cageColor,
           fontSize: u * 0.24,
           fontWeight: FontWeight.w700,
           height: 1.0,
@@ -102,5 +183,7 @@ class ConstraintOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant ConstraintOverlayPainter oldDelegate) =>
-      oldDelegate.variant != variant || oldDelegate.color != color;
+      oldDelegate.variant != variant ||
+      oldDelegate.cageColor != cageColor ||
+      oldDelegate.lineColor != lineColor;
 }
