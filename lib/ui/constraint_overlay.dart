@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/variant_spec.dart';
 import '../engine/constraints/arrow.dart';
 import '../engine/constraints/killer_cage.dart';
+import '../engine/constraints/pair_dot.dart';
 import '../engine/constraints/thermometer.dart';
 import '../engine/grid.dart';
 
@@ -15,11 +16,13 @@ class ConstraintOverlayPainter extends CustomPainter {
   final VariantSpec variant;
   final Color cageColor;
   final Color lineColor;
+  final Color cellColor;
 
   ConstraintOverlayPainter({
     required this.variant,
     required this.cageColor,
     required this.lineColor,
+    required this.cellColor,
   });
 
   @override
@@ -32,6 +35,52 @@ class ConstraintOverlayPainter extends CustomPainter {
     }
     for (final cage in variant.constraints.whereType<KillerCage>()) {
       _paintCage(canvas, u, cage);
+    }
+    // Edge dots sit on top of everything so they stay visible.
+    for (final dot in variant.constraints.whereType<PairDot>()) {
+      _paintDot(canvas, u, dot);
+    }
+  }
+
+  // ---- Kropki / ratio / sum dot ------------------------------------------
+  void _paintDot(Canvas canvas, double u, PairDot dot) {
+    final center = Offset(
+      ((colOf(dot.a) + colOf(dot.b)) / 2 + 0.5) * u,
+      ((rowOf(dot.a) + rowOf(dot.b)) / 2 + 0.5) * u,
+    );
+    if (dot.kind == PairDotKind.sum) {
+      canvas.drawCircle(center, u * 0.18, Paint()..color = cellColor);
+      final label =
+          dot.value == 10 ? 'X' : (dot.value == 5 ? 'V' : '${dot.value}');
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: lineColor,
+            fontSize: u * 0.28,
+            fontWeight: FontWeight.w700,
+            height: 1.0,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
+      return;
+    }
+    final r = u * 0.11;
+    canvas.drawCircle(center, r + u * 0.02, Paint()..color = cellColor);
+    if (dot.kind == PairDotKind.ratio) {
+      canvas.drawCircle(center, r, Paint()..color = lineColor); // filled (black)
+    } else {
+      canvas.drawCircle(center, r, Paint()..color = cellColor); // hollow (white)
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..color = lineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = u * 0.035,
+      );
     }
   }
 
@@ -185,5 +234,6 @@ class ConstraintOverlayPainter extends CustomPainter {
   bool shouldRepaint(covariant ConstraintOverlayPainter oldDelegate) =>
       oldDelegate.variant != variant ||
       oldDelegate.cageColor != cageColor ||
-      oldDelegate.lineColor != lineColor;
+      oldDelegate.lineColor != lineColor ||
+      oldDelegate.cellColor != cellColor;
 }

@@ -12,6 +12,7 @@ library;
 
 import 'arrow.dart';
 import 'killer_cage.dart';
+import 'pair_dot.dart';
 import 'thermometer.dart';
 
 /// A single variant rule attached to a puzzle.
@@ -46,6 +47,8 @@ Constraint constraintFromJson(Map<String, dynamic> json) {
       return Thermometer.fromJson(json);
     case 'arrow':
       return Arrow.fromJson(json);
+    case 'pair_dot':
+      return PairDot.fromJson(json);
     default:
       throw ArgumentError('Unknown constraint type "$type"');
   }

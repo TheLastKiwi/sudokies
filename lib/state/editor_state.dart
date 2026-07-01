@@ -7,13 +7,14 @@ import '../data/variant_spec.dart';
 import '../engine/constraints/arrow.dart';
 import '../engine/constraints/constraint.dart';
 import '../engine/constraints/killer_cage.dart';
+import '../engine/constraints/pair_dot.dart';
 import '../engine/constraints/thermometer.dart';
 import '../engine/grid.dart';
 import '../engine/solver.dart';
 import '../engine/step.dart';
 
 /// Which editing tool the palette is on.
-enum EditorTool { givens, cage, thermo, arrow }
+enum EditorTool { givens, cage, thermo, arrow, dot }
 
 /// Authoring state for the visual puzzle editor: the clue digits and the
 /// variant constraints, plus the in-progress cell selection. Validation runs the
@@ -59,6 +60,12 @@ class EditorState extends ChangeNotifier {
     } else if (tool == EditorTool.thermo || tool == EditorTool.arrow) {
       // Ordered path — toggle membership, preserving tap order.
       if (!pending.remove(i)) pending.add(i);
+    } else if (tool == EditorTool.dot) {
+      // A dot joins exactly two cells; a third tap starts a new pair.
+      if (!pending.remove(i)) {
+        if (pending.length >= 2) pending.clear();
+        pending.add(i);
+      }
     }
     notifyListeners();
   }
@@ -113,6 +120,25 @@ class EditorState extends ChangeNotifier {
   String? addArrow() {
     if (pending.length < 2) return 'Tap the bulb, then the path cells.';
     constraints.add(Arrow([pending.first], pending.sublist(1)));
+    pending.clear();
+    notifyListeners();
+    return null;
+  }
+
+  /// Commit the pending pair of adjacent cells as a dot of the given [kind].
+  String? addDot(PairDotKind kind, int value) {
+    if (pending.length != 2) return 'Tap exactly two adjacent cells.';
+    final a = pending[0], b = pending[1];
+    final adjacent =
+        (rowOf(a) - rowOf(b)).abs() + (colOf(a) - colOf(b)).abs() == 1;
+    if (!adjacent) return 'The two cells must be orthogonally adjacent.';
+    if (kind == PairDotKind.sum && (value < 3 || value > 17)) {
+      return 'A two-cell sum must be between 3 and 17.';
+    }
+    if (kind == PairDotKind.ratio && value < 2) {
+      return 'The ratio factor must be at least 2.';
+    }
+    constraints.add(PairDot(a, b, kind, value));
     pending.clear();
     notifyListeners();
     return null;
@@ -181,6 +207,8 @@ class EditorState extends ChangeNotifier {
           return 'thermo';
         case 'arrow':
           return 'arrow';
+        case 'pair_dot':
+          return 'kropki';
       }
     }
     return 'custom';

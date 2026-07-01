@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../app.dart';
 import '../../data/puzzle.dart';
 import '../../engine/constraints/killer_cage.dart';
+import '../../engine/constraints/pair_dot.dart';
 import '../../engine/grid.dart';
 import '../../engine/step.dart';
 import '../../state/editor_state.dart';
@@ -23,6 +24,9 @@ class PuzzleEditorScreen extends StatefulWidget {
 class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
   final EditorState editor = EditorState();
   final TextEditingController _sumController = TextEditingController();
+  final TextEditingController _dotValueController =
+      TextEditingController(text: '10');
+  PairDotKind _dotKind = PairDotKind.ratio;
 
   Services get services => AppScope.of(context);
 
@@ -30,6 +34,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
   void dispose() {
     editor.dispose();
     _sumController.dispose();
+    _dotValueController.dispose();
     super.dispose();
   }
 
@@ -107,6 +112,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
     EditorTool.cage: 'Cage',
     EditorTool.thermo: 'Thermo',
     EditorTool.arrow: 'Arrow',
+    EditorTool.dot: 'Dot',
   };
 
   Widget _toolSelector() {
@@ -144,7 +150,83 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
           addLabel: 'Add arrow',
           onAdd: () => editor.addArrow(),
         );
+      case EditorTool.dot:
+        return _dotPanel();
     }
+  }
+
+  Widget _dotPanel() {
+    final needsValue = _dotKind != PairDotKind.consecutive;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tap two adjacent cells, choose the relation, then Add. '
+          'Ratio = one is N× the other; Sum uses X=10, V=5.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final k in PairDotKind.values)
+              ChoiceChip(
+                label: Text(_dotKindLabel(k)),
+                selected: _dotKind == k,
+                onSelected: (_) => setState(() => _dotKind = k),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (needsValue)
+              Expanded(
+                child: TextField(
+                  controller: _dotValueController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: _dotKind == PairDotKind.ratio ? 'Factor' : 'Sum',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                    helperText: '${editor.pending.length}/2 cells selected',
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: Text('${editor.pending.length}/2 cells selected',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ),
+            const SizedBox(width: 8),
+            FilledButton(onPressed: _addDot, child: const Text('Add dot')),
+            const SizedBox(width: 4),
+            TextButton(
+                onPressed: editor.pending.isEmpty ? null : editor.clearPending,
+                child: const Text('Clear')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _dotKindLabel(PairDotKind k) {
+    switch (k) {
+      case PairDotKind.ratio:
+        return 'Ratio';
+      case PairDotKind.consecutive:
+        return 'Consecutive';
+      case PairDotKind.sum:
+        return 'Sum';
+    }
+  }
+
+  void _addDot() {
+    final value = _dotKind == PairDotKind.consecutive
+        ? 0
+        : (int.tryParse(_dotValueController.text.trim()) ?? -1);
+    final err = editor.addDot(_dotKind, value);
+    if (err != null) _snack(err);
   }
 
   Widget _pathPanel({
@@ -183,6 +265,16 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
     String label(int i) {
       final c = editor.constraints[i];
       if (c is KillerCage) return 'Cage ${c.sum} (${c.cells.length})';
+      if (c is PairDot) {
+        switch (c.kind) {
+          case PairDotKind.ratio:
+            return 'Ratio ${c.value == 0 ? 2 : c.value}:1';
+          case PairDotKind.consecutive:
+            return 'Consecutive';
+          case PairDotKind.sum:
+            return 'Sum ${c.value}';
+        }
+      }
       switch (c.type) {
         case 'thermometer':
           return 'Thermo (${c.cells.length})';

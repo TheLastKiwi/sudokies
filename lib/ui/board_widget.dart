@@ -121,6 +121,7 @@ class BoardWidget extends StatelessWidget {
                           variant: variant!,
                           cageColor: colors.cage,
                           lineColor: colors.line,
+                          cellColor: colors.cell,
                         ),
                       ),
                     ),

@@ -14,6 +14,7 @@ import 'colouring.dart';
 import 'unique_rectangle.dart';
 import 'killer.dart';
 import 'thermo_arrow.dart';
+import 'pair_dot.dart';
 
 typedef ApplyFn = SolveStep? Function(CandidateGrid grid);
 
@@ -249,6 +250,16 @@ final List<Strategy> allStrategies = [
         'The digits along an arrow sum to the number on its bulb, bounding '
         'both the bulb and the path cells.',
     apply: arrow,
+  ),
+  // ---- Variant: Kropki / ratio / sum dots ----
+  Strategy(
+    id: 'pair_dot',
+    name: 'Dot Constraint',
+    rank: 8,
+    description:
+        'A marker between two adjacent cells fixes their relation (ratio, '
+        'consecutive, or sum). Digits with no valid partner are removed.',
+    apply: pairDot,
   ),
 ]..sort((a, b) => a.rank.compareTo(b.rank));
 
