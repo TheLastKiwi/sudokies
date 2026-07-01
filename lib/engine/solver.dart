@@ -14,12 +14,18 @@ class SolveResult {
   final Map<String, int> usage; // strategyId -> times applied
   final int steps;
 
+  /// The board string after solving stopped — a full 81-digit solution when
+  /// [solved], otherwise the partial grid (used by the editor to store the
+  /// derived solution of an authored puzzle).
+  final String board;
+
   const SolveResult({
     required this.solved,
     required this.hardestRank,
     required this.tier,
     required this.usage,
     required this.steps,
+    required this.board,
   });
 }
 
@@ -69,5 +75,6 @@ SolveResult solveLogically(
     tier: solved ? tierForRank(hardest) : null,
     usage: usage,
     steps: steps,
+    board: g.toBoardString(),
   );
 }

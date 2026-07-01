@@ -5,6 +5,7 @@ import '../data/puzzle.dart';
 import '../data/puzzle_repository.dart';
 import '../engine/step.dart';
 import '../state/game_state.dart';
+import 'editor/puzzle_editor_screen.dart';
 import 'game_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
@@ -129,6 +130,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _createPuzzle() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PuzzleEditorScreen()),
+    );
+    if (mounted) setState(() {}); // refresh My Puzzles after returning
+  }
+
   void _continue() {
     final game = restoreSavedGame(
       prefs: services.prefs,
@@ -194,6 +203,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.tag),
                   label: const Text('Enter Code'),
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _createPuzzle,
+                  icon: const Icon(Icons.brush_outlined),
+                  label: const Text('Create Puzzle'),
+                ),
+                ..._myPuzzles(),
                 const SizedBox(height: 24),
                 _navTile(Icons.school, 'Techniques',
                     () => _push(const TechniquesScreen())),
@@ -231,6 +247,37 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _myPuzzles() {
+    final puzzles = services.customPuzzles.puzzles;
+    if (puzzles.isEmpty) return const [];
+    return [
+      const SizedBox(height: 24),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: Text('My Puzzles',
+            style: Theme.of(context).textTheme.titleSmall),
+      ),
+      const SizedBox(height: 4),
+      for (final p in puzzles)
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.extension_outlined),
+            title: Text(p.variant?.name ?? 'Custom puzzle'),
+            subtitle: Text('${p.difficulty.label} · ${p.code}'),
+            onTap: _loading ? null : () => _open(_gameFor(p)),
+            trailing: IconButton(
+              tooltip: 'Delete',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                await services.customPuzzles.remove(p.code);
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+        ),
+    ];
   }
 
   Widget _navTile(IconData icon, String title, VoidCallback onTap) {
