@@ -15,6 +15,7 @@ import 'unique_rectangle.dart';
 import 'killer.dart';
 import 'thermo_arrow.dart';
 import 'pair_dot.dart';
+import 'inequality.dart';
 
 typedef ApplyFn = SolveStep? Function(CandidateGrid grid);
 
@@ -260,6 +261,16 @@ final List<Strategy> allStrategies = [
         'A marker between two adjacent cells fixes their relation (ratio, '
         'consecutive, or sum). Digits with no valid partner are removed.',
     apply: pairDot,
+  ),
+  // ---- Variant: Inequalities ----
+  Strategy(
+    id: 'inequality',
+    name: 'Inequality',
+    rank: 7,
+    description:
+        'Across a greater-than marker one cell must be smaller than the other, '
+        'bounding both cells and chaining along runs of inequalities.',
+    apply: inequality,
   ),
 ]..sort((a, b) => a.rank.compareTo(b.rank));
 

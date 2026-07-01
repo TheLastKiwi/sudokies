@@ -11,6 +11,7 @@
 library;
 
 import 'arrow.dart';
+import 'inequality.dart';
 import 'killer_cage.dart';
 import 'pair_dot.dart';
 import 'thermometer.dart';
@@ -49,6 +50,8 @@ Constraint constraintFromJson(Map<String, dynamic> json) {
       return Arrow.fromJson(json);
     case 'pair_dot':
       return PairDot.fromJson(json);
+    case 'inequality':
+      return Inequality.fromJson(json);
     default:
       throw ArgumentError('Unknown constraint type "$type"');
   }

@@ -6,6 +6,7 @@ import '../data/puzzle.dart';
 import '../data/variant_spec.dart';
 import '../engine/constraints/arrow.dart';
 import '../engine/constraints/constraint.dart';
+import '../engine/constraints/inequality.dart';
 import '../engine/constraints/killer_cage.dart';
 import '../engine/constraints/pair_dot.dart';
 import '../engine/constraints/thermometer.dart';
@@ -14,7 +15,7 @@ import '../engine/solver.dart';
 import '../engine/step.dart';
 
 /// Which editing tool the palette is on.
-enum EditorTool { givens, cage, thermo, arrow, dot }
+enum EditorTool { givens, cage, thermo, arrow, dot, ineq }
 
 /// Authoring state for the visual puzzle editor: the clue digits and the
 /// variant constraints, plus the in-progress cell selection. Validation runs the
@@ -60,8 +61,8 @@ class EditorState extends ChangeNotifier {
     } else if (tool == EditorTool.thermo || tool == EditorTool.arrow) {
       // Ordered path — toggle membership, preserving tap order.
       if (!pending.remove(i)) pending.add(i);
-    } else if (tool == EditorTool.dot) {
-      // A dot joins exactly two cells; a third tap starts a new pair.
+    } else if (tool == EditorTool.dot || tool == EditorTool.ineq) {
+      // Joins exactly two cells; a third tap starts a new pair.
       if (!pending.remove(i)) {
         if (pending.length >= 2) pending.clear();
         pending.add(i);
@@ -144,6 +145,19 @@ class EditorState extends ChangeNotifier {
     return null;
   }
 
+  /// Commit the pending pair as an inequality: the first cell is the smaller.
+  String? addInequality() {
+    if (pending.length != 2) return 'Tap the smaller cell, then the larger.';
+    final a = pending[0], b = pending[1];
+    final adjacent =
+        (rowOf(a) - rowOf(b)).abs() + (colOf(a) - colOf(b)).abs() == 1;
+    if (!adjacent) return 'The two cells must be orthogonally adjacent.';
+    constraints.add(Inequality(a, b));
+    pending.clear();
+    notifyListeners();
+    return null;
+  }
+
   void removeConstraint(int index) {
     if (index < 0 || index >= constraints.length) return;
     constraints.removeAt(index);
@@ -209,6 +223,8 @@ class EditorState extends ChangeNotifier {
           return 'arrow';
         case 'pair_dot':
           return 'kropki';
+        case 'inequality':
+          return 'greater-than';
       }
     }
     return 'custom';

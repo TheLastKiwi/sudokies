@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/variant_spec.dart';
 import '../engine/constraints/arrow.dart';
+import '../engine/constraints/inequality.dart';
 import '../engine/constraints/killer_cage.dart';
 import '../engine/constraints/pair_dot.dart';
 import '../engine/constraints/thermometer.dart';
@@ -36,10 +37,36 @@ class ConstraintOverlayPainter extends CustomPainter {
     for (final cage in variant.constraints.whereType<KillerCage>()) {
       _paintCage(canvas, u, cage);
     }
-    // Edge dots sit on top of everything so they stay visible.
+    // Edge markers sit on top of everything so they stay visible.
+    for (final ineq in variant.constraints.whereType<Inequality>()) {
+      _paintInequality(canvas, u, ineq);
+    }
     for (final dot in variant.constraints.whereType<PairDot>()) {
       _paintDot(canvas, u, dot);
     }
+  }
+
+  // ---- Inequality (greater-than) -----------------------------------------
+  void _paintInequality(Canvas canvas, double u, Inequality ineq) {
+    final loC = _center(u, ineq.lo);
+    final hiC = _center(u, ineq.hi);
+    final center = (loC + hiC) / 2;
+    // The chevron's vertex points at the smaller cell.
+    var dir = loC - hiC;
+    dir = dir / dir.distance;
+    final perp = Offset(-dir.dy, dir.dx);
+    final s = u * 0.16;
+    final vertex = center + dir * s;
+    final back1 = center - dir * (s * 0.2) + perp * s;
+    final back2 = center - dir * (s * 0.2) - perp * s;
+    final paint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.05
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawLine(back1, vertex, paint);
+    canvas.drawLine(back2, vertex, paint);
   }
 
   // ---- Kropki / ratio / sum dot ------------------------------------------

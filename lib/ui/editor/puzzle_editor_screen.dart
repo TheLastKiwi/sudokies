@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app.dart';
 import '../../data/puzzle.dart';
+import '../../engine/constraints/inequality.dart';
 import '../../engine/constraints/killer_cage.dart';
 import '../../engine/constraints/pair_dot.dart';
 import '../../engine/grid.dart';
@@ -113,6 +114,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
     EditorTool.thermo: 'Thermo',
     EditorTool.arrow: 'Arrow',
     EditorTool.dot: 'Dot',
+    EditorTool.ineq: 'Less<',
   };
 
   Widget _toolSelector() {
@@ -152,6 +154,13 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
         );
       case EditorTool.dot:
         return _dotPanel();
+      case EditorTool.ineq:
+        return _pathPanel(
+          hint: 'Tap the smaller cell first, then the larger adjacent cell. '
+              'The chevron points at the smaller.',
+          addLabel: 'Add inequality',
+          onAdd: () => editor.addInequality(),
+        );
     }
   }
 
@@ -265,6 +274,7 @@ class _PuzzleEditorScreenState extends State<PuzzleEditorScreen> {
     String label(int i) {
       final c = editor.constraints[i];
       if (c is KillerCage) return 'Cage ${c.sum} (${c.cells.length})';
+      if (c is Inequality) return 'Less-than';
       if (c is PairDot) {
         switch (c.kind) {
           case PairDotKind.ratio:

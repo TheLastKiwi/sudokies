@@ -10,7 +10,7 @@ import 'ui/home_screen.dart';
 import 'ui/theme.dart';
 
 /// Displayed version label. Bump alongside `version` in pubspec.yaml.
-const String appVersion = 'v0.4.0';
+const String appVersion = 'v0.5.0';
 
 /// Shared app-wide services, created once at startup.
 class Services {
