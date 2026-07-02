@@ -5,12 +5,14 @@ import 'data/custom_puzzle_store.dart';
 import 'data/history_store.dart';
 import 'data/puzzle_repository.dart';
 import 'data/technique_library.dart';
+import 'state/connectivity_service.dart';
 import 'state/settings.dart';
 import 'ui/home_screen.dart';
+import 'ui/offline_banner.dart';
 import 'ui/theme.dart';
 
 /// Displayed version label. Bump alongside `version` in pubspec.yaml.
-const String appVersion = 'v0.5.0';
+const String appVersion = 'v0.6.0';
 
 /// Shared app-wide services, created once at startup.
 class Services {
@@ -20,6 +22,7 @@ class Services {
   final TechniqueLibrary library;
   final HistoryStore history;
   final CustomPuzzleStore customPuzzles;
+  final ConnectivityService connectivity;
 
   Services({
     required this.prefs,
@@ -28,6 +31,7 @@ class Services {
     required this.library,
     required this.history,
     required this.customPuzzles,
+    required this.connectivity,
   });
 
   static Future<Services> create() async {
@@ -40,6 +44,7 @@ class Services {
       library: library,
       history: HistoryStore(prefs),
       customPuzzles: CustomPuzzleStore(prefs),
+      connectivity: ConnectivityService(),
     );
   }
 }
@@ -77,6 +82,8 @@ class SudokiesApp extends StatelessWidget {
             themeMode:
                 services.settings.darkMode ? ThemeMode.dark : ThemeMode.light,
             debugShowCheckedModeBanner: false,
+            builder: (context, child) =>
+                OfflineBanner(child: child ?? const SizedBox.shrink()),
             home: const HomeScreen(),
           );
         },
