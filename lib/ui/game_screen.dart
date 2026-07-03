@@ -119,6 +119,7 @@ class _GameScreenState extends State<GameScreen> {
                                 candidates: game.candidates,
                                 givens: game.givens,
                                 selectedCell: game.selectedCell,
+                                highlightPeers: game.highlightPeers,
                                 highlightDigit:
                                     game.autoEntry ? game.penDigit : null,
                                 wrongCells: _wrongCells(),

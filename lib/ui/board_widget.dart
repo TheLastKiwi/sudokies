@@ -18,6 +18,10 @@ class BoardWidget extends StatelessWidget {
   /// selected — used by auto-entry's "pen" so picking a number lights up every
   /// cell holding it, exactly as selecting a filled cell of that digit does.
   final int? highlightDigit;
+
+  /// When false, the selected cell no longer lights up its row/column/box
+  /// peers (toggled by re-tapping the selected cell in live play).
+  final bool highlightPeers;
   final Set<int> wrongCells;
   final Map<int, HighlightRole> roleCells;
   final List<CandidateMark> roleCandidates;
@@ -35,6 +39,7 @@ class BoardWidget extends StatelessWidget {
     required this.givens,
     this.selectedCell,
     this.highlightDigit,
+    this.highlightPeers = true,
     this.wrongCells = const {},
     this.roleCells = const {},
     this.roleCandidates = const [],
@@ -54,7 +59,7 @@ class BoardWidget extends StatelessWidget {
       int? highlight;
       if (selectedCell != null) {
         final sel = selectedCell!;
-        peerSet.addAll(peers[sel]);
+        if (highlightPeers) peerSet.addAll(peers[sel]);
         if (values[sel] != 0) highlight = values[sel];
       }
       // Fall back to the auto-entry pen digit when no filled cell drives the

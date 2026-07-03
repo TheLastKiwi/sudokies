@@ -54,28 +54,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _pickDifficulty() async {
-    final choice = await showModalBottomSheet<Difficulty>(
+  Future<void> _newKillerGame(Difficulty difficulty) async {
+    setState(() => _loading = true);
+    try {
+      final puzzle =
+          await services.repository.randomKillerByDifficulty(difficulty);
+      if (!mounted) return;
+      await _open(_gameFor(puzzle));
+    } on PuzzleNotFound catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Could not load a Killer puzzle.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Opens the New Game chooser: a tabbed sheet to start a Classic game, a
+  /// Killer game, or design a Custom puzzle. The Killer tab lists only the
+  /// tiers that have bundled puzzles, so we resolve those before showing.
+  Future<void> _showNewGameSheet() async {
+    final killerTiers = services.repository.killerTiers();
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Choose difficulty',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            for (final d in Difficulty.values)
-              ListTile(
-                title: Text(d.label),
-                onTap: () => Navigator.pop(ctx, d),
-              ),
-          ],
-        ),
+      showDragHandle: true,
+      builder: (ctx) => _NewGameSheet(
+        killerTiers: killerTiers,
+        onClassic: (d) {
+          Navigator.pop(ctx);
+          _newGame(d);
+        },
+        onKiller: (d) {
+          Navigator.pop(ctx);
+          _newKillerGame(d);
+        },
+        onCustom: () {
+          Navigator.pop(ctx);
+          _createPuzzle();
+        },
       ),
     );
-    if (choice != null) _newGame(choice);
   }
 
   Future<void> _enterCode() async {
@@ -193,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
                 ],
                 FilledButton.icon(
-                  onPressed: _loading ? null : _pickDifficulty,
+                  onPressed: _loading ? null : _showNewGameSheet,
                   icon: const Icon(Icons.add),
                   label: const Text('New Game'),
                 ),
@@ -202,12 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onPressed: _loading ? null : _enterCode,
                   icon: const Icon(Icons.tag),
                   label: const Text('Enter Code'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : _createPuzzle,
-                  icon: const Icon(Icons.brush_outlined),
-                  label: const Text('Create Puzzle'),
                 ),
                 ..._myPuzzles(),
                 const SizedBox(height: 24),
@@ -292,5 +304,146 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _push(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
     if (mounted) setState(() {});
+  }
+}
+
+/// The New Game chooser: three tabs for the game types. Classic and Killer both
+/// start a graded puzzle at the chosen difficulty; Custom opens the visual
+/// editor. The Killer tab lists only [killerTiers] — the difficulties that have
+/// bundled puzzles — so every tile shown is guaranteed to be playable.
+class _NewGameSheet extends StatelessWidget {
+  final ValueChanged<Difficulty> onClassic;
+  final ValueChanged<Difficulty> onKiller;
+  final VoidCallback onCustom;
+  final Future<List<Difficulty>> killerTiers;
+
+  const _NewGameSheet({
+    required this.onClassic,
+    required this.onKiller,
+    required this.onCustom,
+    required this.killerTiers,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 3,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const TabBar(
+              tabs: [
+                Tab(text: 'Classic'),
+                Tab(text: 'Killer'),
+                Tab(text: 'Custom'),
+              ],
+            ),
+            SizedBox(
+              height: 300,
+              child: TabBarView(
+                children: [
+                  _classicTab(context),
+                  _killerTab(context),
+                  _customTab(context),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _classicTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        for (final d in Difficulty.values)
+          ListTile(
+            leading: const Icon(Icons.grid_on),
+            title: Text(d.label),
+            onTap: () => onClassic(d),
+          ),
+      ],
+    );
+  }
+
+  Widget _killerTab(BuildContext context) {
+    return FutureBuilder<List<Difficulty>>(
+      future: killerTiers,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final tiers = snapshot.data ?? const <Difficulty>[];
+        if (tiers.isEmpty) {
+          return _infoTab(
+            context,
+            icon: Icons.calculate_outlined,
+            title: 'Killer Sudoku',
+            body: 'No ready-made Killer puzzles are bundled yet.\n\n'
+                'Want to try one now? Design your own in the Custom tab.',
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            for (final d in tiers)
+              ListTile(
+                leading: const Icon(Icons.calculate_outlined),
+                title: Text(d.label),
+                onTap: () => onKiller(d),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _customTab(BuildContext context) {
+    return _infoTab(
+      context,
+      icon: Icons.brush_outlined,
+      title: 'Custom puzzle',
+      body: 'Design your own puzzle with cages, thermometers, arrows, dots and '
+          'inequalities. It\'s validated and graded before you play.',
+      action: FilledButton.icon(
+        onPressed: onCustom,
+        icon: const Icon(Icons.brush_outlined),
+        label: const Text('Open editor'),
+      ),
+    );
+  }
+
+  Widget _infoTab(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String body,
+    Widget? action,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 12),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(body,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium),
+            if (action != null) ...[
+              const SizedBox(height: 20),
+              action,
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

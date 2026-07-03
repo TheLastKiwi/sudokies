@@ -74,6 +74,10 @@ class GameState extends ChangeNotifier {
   List<Constraint> get _constraints => puzzle.variant?.constraints ?? const [];
 
   int? selectedCell;
+
+  // Whether the selected cell lights up its row/column/box peers. Re-tapping
+  // the selected cell toggles this off; selecting a different cell resets it.
+  bool highlightPeers = true;
   EntryMode mode = EntryMode.fill;
 
   // Auto-entry: when on, the pad selects a "pen" digit instead of writing it,
@@ -168,7 +172,15 @@ class GameState extends ChangeNotifier {
 
   // ---- Selection ----------------------------------------------------------
   void selectCell(int i) {
+    // Re-tapping the current selection toggles its row/column/box highlight
+    // off (and back on), unless auto-entry is actively stamping a digit.
+    if (i == selectedCell && !(autoEntry && penDigit != null)) {
+      highlightPeers = !highlightPeers;
+      notifyListeners();
+      return;
+    }
     selectedCell = i;
+    highlightPeers = true;
     if (autoEntry && penDigit != null) {
       _applyDigit(i, penDigit!);
       return; // _applyDigit notifies
