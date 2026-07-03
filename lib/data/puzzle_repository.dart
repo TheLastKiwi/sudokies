@@ -22,12 +22,27 @@ class PuzzleRepository {
   final Random _rng = Random();
   Map<Difficulty, List<Puzzle>> _starter = {};
   bool _loaded = false;
+  Map<Difficulty, List<Puzzle>> _killer = {};
+  bool _killerLoaded = false;
 
   PuzzleRepository({http.Client? client}) : _client = client ?? http.Client();
 
   Future<void> _ensureStarter() async {
     if (_loaded) return;
-    final raw = await rootBundle.loadString('assets/puzzles/starter.json');
+    _starter = await _loadBank('assets/puzzles/starter.json');
+    _loaded = true;
+  }
+
+  /// The bundled Killer bank, keyed by tier. Local-only (Killer puzzles carry
+  /// arbitrary cage rules and are not served from Firebase).
+  Future<void> _ensureKiller() async {
+    if (_killerLoaded) return;
+    _killer = await _loadBank('assets/puzzles/killer.json');
+    _killerLoaded = true;
+  }
+
+  Future<Map<Difficulty, List<Puzzle>>> _loadBank(String asset) async {
+    final raw = await rootBundle.loadString(asset);
     final json = jsonDecode(raw) as Map<String, dynamic>;
     final puzzles = (json['puzzles'] as Map<String, dynamic>?) ?? {};
     final map = {for (final d in Difficulty.values) d: <Puzzle>[]};
@@ -37,8 +52,28 @@ class PuzzleRepository {
         map[tier]!.add(Puzzle.fromJson(Map<String, dynamic>.from(p as Map)));
       }
     });
-    _starter = map;
-    _loaded = true;
+    return map;
+  }
+
+  /// A random bundled Killer puzzle of the given [difficulty].
+  Future<Puzzle> randomKillerByDifficulty(Difficulty difficulty) async {
+    await _ensureKiller();
+    final list = _killer[difficulty] ?? const [];
+    if (list.isEmpty) {
+      throw PuzzleNotFound(
+          'No ${difficulty.label} Killer puzzles available offline.');
+    }
+    return list[_rng.nextInt(list.length)];
+  }
+
+  /// Tiers that actually have bundled Killer puzzles (Killer omits Extreme), so
+  /// a variant picker can show only the difficulties that exist.
+  Future<List<Difficulty>> killerTiers() async {
+    await _ensureKiller();
+    return [
+      for (final d in Difficulty.values)
+        if ((_killer[d] ?? const []).isNotEmpty) d
+    ];
   }
 
   /// All starter puzzles flattened (used by repository fallbacks / lookups).

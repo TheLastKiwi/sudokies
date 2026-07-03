@@ -128,6 +128,80 @@ void main() {
     });
   });
 
+  group('rule of 45', () {
+    CandidateGrid grid(List<Constraint> cages) =>
+        CandidateGrid.fromValues(List<int>.filled(81, 0), constraints: cages);
+
+    test('single innie of a box is forced by 45', () {
+      // Box 0's cages fill 8 of its 9 cells (summing 36); the leftover cell 20
+      // must be 45 - 36 = 9.
+      final step = killerInnie(grid(const [
+        KillerCage([0, 1, 2], 6),
+        KillerCage([9, 10, 11], 15),
+        KillerCage([18, 19], 15),
+      ]));
+      expect(step, isNotNull);
+      expect(step!.placements.single.cell, 20);
+      expect(step.placements.single.digit, 9);
+    });
+
+    test('two innies of a box restrict candidates to their combo union', () {
+      // Box 0's inner cages cover 7 cells (summing 28); the two leftover cells
+      // 19 and 20 must sum to 17 -> only {8,9}.
+      final step = killerInnieOutie(grid(const [
+        KillerCage([0, 1, 2], 6),
+        KillerCage([9, 10, 11], 15),
+        KillerCage([18], 7),
+      ]));
+      expect(step, isNotNull);
+      expect(step!.strategyId, 'killer_innie_outie');
+      final elims = step.eliminations.toSet();
+      expect(elims, contains(const Elimination(19, 1)));
+      expect(elims, contains(const Elimination(20, 7)));
+      expect(elims, isNot(contains(const Elimination(19, 8))));
+      expect(elims, isNot(contains(const Elimination(20, 9))));
+    });
+
+    test('a single innie of a two-row band is forced by 90', () {
+      // Rows 0-1 (sum 90) are covered except cell 17; 90 - 45 - 39 = 6.
+      final step = killerBigInnie(grid(const [
+        KillerCage([0, 1, 2, 3, 4, 5, 6, 7, 8], 45),
+        KillerCage([9, 10, 11, 12, 13, 14, 15, 16], 39),
+      ]));
+      expect(step, isNotNull);
+      expect(step!.strategyId, 'killer_big_innie');
+      expect(step.placements.single.cell, 17);
+      expect(step.placements.single.digit, 6);
+    });
+  });
+
+  group('killer pair / locked set', () {
+    test('a 17-cage inside a box locks 8,9 out of the rest of the box', () {
+      // Cells 0 (r1c1) and 10 (r2c2) share only box 0. A 2-cell cage summing to
+      // 17 must be {8,9}, so 8 and 9 leave the box's other cells.
+      final g = CandidateGrid.fromValues(List<int>.filled(81, 0),
+          constraints: const [KillerCage([0, 10], 17)]);
+      final step = killerCageUnit(g);
+      expect(step, isNotNull);
+      expect(step!.strategyId, 'killer_cage_unit');
+      final elims = step.eliminations.toSet();
+      expect(elims, contains(const Elimination(1, 8)));
+      expect(elims, contains(const Elimination(20, 9)));
+      // Cell 3 (r1c4) is outside box 0 and must be untouched.
+      expect(elims, isNot(contains(const Elimination(3, 8))));
+    });
+  });
+
+  group('killer strategies ignore classic grids', () {
+    test('every killer strategy returns null without constraints', () {
+      final g = CandidateGrid.fromValues(List<int>.filled(81, 0));
+      expect(killerInnie(g), isNull);
+      expect(killerInnieOutie(g), isNull);
+      expect(killerBigInnie(g), isNull);
+      expect(killerCageUnit(g), isNull);
+    });
+  });
+
   group('integrated solve', () {
     const easy =
         '530070000600195000098000060800060003400803001700020006060000280000419005000080079';

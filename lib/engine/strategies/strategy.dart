@@ -224,14 +224,54 @@ final List<Strategy> allStrategies = [
     apply: killerNoRepeat,
   ),
   Strategy(
+    id: 'killer_innie',
+    name: '45 Rule (Single Cell)',
+    rank: 12,
+    description:
+        'Every row, column and box sums to 45. When the cages inside a unit '
+        'leave just one cell over (an innie) — or one cage cell pokes outside '
+        'it (an outie) — the missing total forces that cell\'s digit.',
+    apply: killerInnie,
+  ),
+  Strategy(
     id: 'killer_cage_sums',
     name: 'Cage Sum Combinations',
-    rank: 15,
+    rank: 8,
     description:
         'The empty cells of a killer cage must form a distinct-digit '
         'combination summing to the remaining total. Digits in no valid '
         'combination can be removed.',
     apply: killerCageSums,
+  ),
+  Strategy(
+    id: 'killer_cage_unit',
+    name: 'Killer Pair / Locked Set',
+    rank: 22,
+    description:
+        'A cage confined to one unit whose empty cells hold exactly as many '
+        'distinct digits as there are cells is a locked set. Those digits can '
+        'be removed from the rest of the unit.',
+    apply: killerCageUnit,
+  ),
+  Strategy(
+    id: 'killer_innie_outie',
+    name: '45 Rule (Innies & Outies)',
+    rank: 24,
+    description:
+        'By the Rule of 45, the cells a unit leaves outside its inner cages '
+        'have a known sum. Treated as a virtual cage, candidates fitting no '
+        'valid combination are removed.',
+    apply: killerInnieOutie,
+  ),
+  Strategy(
+    id: 'killer_big_innie',
+    name: '45 Rule (Multi-Region)',
+    rank: 32,
+    description:
+        'The Rule of 45 extended across a band of two or three rows or columns '
+        '(summing to 90 or 135). A single innie or outie of the band has its '
+        'digit forced.',
+    apply: killerBigInnie,
   ),
   // ---- Variant: Thermometer / Arrow ----
   Strategy(

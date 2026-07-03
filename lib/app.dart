@@ -12,7 +12,7 @@ import 'ui/offline_banner.dart';
 import 'ui/theme.dart';
 
 /// Displayed version label. Bump alongside `version` in pubspec.yaml.
-const String appVersion = 'v0.6.0';
+const String appVersion = 'v0.7.0';
 
 /// Shared app-wide services, created once at startup.
 class Services {

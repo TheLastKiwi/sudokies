@@ -1,7 +1,7 @@
 name: sudokies
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.6.0
+version: 0.7.0
 
 environment:
   sdk: '>=3.4.4 <4.0.0'
@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/puzzles/starter.json
+    - assets/puzzles/killer.json
     - assets/techniques.json
   # Bundle Roboto (the Material default family) so the CanvasKit renderer uses
   # these local files instead of downloading Roboto from fonts.gstatic.com at
