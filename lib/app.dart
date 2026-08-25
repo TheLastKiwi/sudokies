@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/auth_service.dart';
 import 'data/custom_puzzle_store.dart';
 import 'data/history_store.dart';
 import 'data/puzzle_repository.dart';
@@ -12,12 +13,13 @@ import 'ui/offline_banner.dart';
 import 'ui/theme.dart';
 
 /// Displayed version label. Bump alongside `version` in pubspec.yaml.
-const String appVersion = 'v0.8.0';
+const String appVersion = 'v0.9.0';
 
 /// Shared app-wide services, created once at startup.
 class Services {
   final SharedPreferences prefs;
   final Settings settings;
+  final AuthService auth;
   final PuzzleRepository repository;
   final TechniqueLibrary library;
   final HistoryStore history;
@@ -27,6 +29,7 @@ class Services {
   Services({
     required this.prefs,
     required this.settings,
+    required this.auth,
     required this.repository,
     required this.library,
     required this.history,
@@ -37,12 +40,14 @@ class Services {
   static Future<Services> create() async {
     final prefs = await SharedPreferences.getInstance();
     final library = await TechniqueLibrary.load();
+    final auth = AuthService(prefs);
     return Services(
       prefs: prefs,
       settings: Settings(prefs),
+      auth: auth,
       repository: PuzzleRepository(),
       library: library,
-      history: HistoryStore(prefs),
+      history: HistoryStore(prefs, auth: auth),
       customPuzzles: CustomPuzzleStore(prefs),
       connectivity: ConnectivityService(),
     );

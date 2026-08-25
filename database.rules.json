@@ -1,0 +1,39 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "puzzles": {
+      ".read": true,
+      ".write": false
+    },
+
+    "index": {
+      ".read": true,
+      ".write": false
+    },
+
+    "techniques": {
+      ".read": true,
+      ".write": false
+    },
+
+    "history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+
+        "$code": {
+          ".validate": "newData.hasChildren(['code', 'difficulty', 'startedAt'])",
+          "code": { ".validate": "newData.isString() && newData.val().length <= 64" },
+          "difficulty": { ".validate": "newData.isString()" },
+          "startedAt": { ".validate": "newData.isString()" },
+          "completedAt": { ".validate": "newData.isString()" },
+          "elapsedSeconds": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "hintsUsed": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "$other": { ".validate": false }
+        }
+      }
+    }
+  }
+}

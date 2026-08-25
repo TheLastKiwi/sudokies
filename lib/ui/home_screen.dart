@@ -39,12 +39,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {}); // refresh Continue card after returning
   }
 
+  /// Starts a puzzle the player has not seen before. Once a tier runs out we
+  /// ask before replaying it, so "New Game" never silently repeats a puzzle.
   Future<void> _newGame(Difficulty difficulty) async {
     setState(() => _loading = true);
     try {
-      final puzzle = await services.repository.randomByDifficulty(difficulty);
+      final puzzle = await services.repository.randomByDifficulty(
+        difficulty,
+        exclude: services.history.attemptedCodes,
+      );
       if (!mounted) return;
       await _open(_gameFor(puzzle));
+    } on PuzzlesExhausted {
+      if (!mounted) return;
+      if (await _confirmReplay(difficulty)) {
+        final puzzle = await services.repository.randomByDifficulty(difficulty);
+        if (!mounted) return;
+        await _open(_gameFor(puzzle));
+      }
     } on PuzzleNotFound catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -57,10 +69,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _newKillerGame(Difficulty difficulty) async {
     setState(() => _loading = true);
     try {
-      final puzzle =
-          await services.repository.randomKillerByDifficulty(difficulty);
+      final puzzle = await services.repository.randomKillerByDifficulty(
+        difficulty,
+        exclude: services.history.attemptedCodes,
+      );
       if (!mounted) return;
       await _open(_gameFor(puzzle));
+    } on PuzzlesExhausted {
+      if (!mounted) return;
+      if (await _confirmReplay(difficulty)) {
+        final puzzle =
+            await services.repository.randomKillerByDifficulty(difficulty);
+        if (!mounted) return;
+        await _open(_gameFor(puzzle));
+      }
     } on PuzzleNotFound catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -68,6 +90,26 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<bool> _confirmReplay(Difficulty difficulty) async {
+    final again = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${difficulty.label} complete'),
+        content: Text('You have played every ${difficulty.label} puzzle. '
+            'Start over with one you have already seen?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Not now')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Replay')),
+        ],
+      ),
+    );
+    return again ?? false;
   }
 
   /// Opens the New Game chooser: a tabbed sheet to start a Classic game, a

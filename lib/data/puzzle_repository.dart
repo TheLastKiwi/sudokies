@@ -15,6 +15,21 @@ class PuzzleNotFound implements Exception {
   String toString() => message;
 }
 
+/// Thrown when every puzzle in a tier has already been attempted, so the
+/// caller can offer to replay the tier instead of dead-ending on New Game.
+class PuzzlesExhausted implements Exception {
+  final Difficulty difficulty;
+  PuzzlesExhausted(this.difficulty);
+  @override
+  String toString() =>
+      'Every ${difficulty.label} puzzle has already been attempted.';
+}
+
+/// How long a Firebase request may run before the bundled bank is used
+/// instead. Without this a captive portal or half-open socket leaves New Game
+/// spinning rather than falling back.
+const Duration _netTimeout = Duration(seconds: 5);
+
 /// Loads puzzles from Firebase (when configured) with the bundled starter set
 /// as an offline fallback.
 class PuzzleRepository {
@@ -24,6 +39,11 @@ class PuzzleRepository {
   bool _loaded = false;
   Map<Difficulty, List<Puzzle>> _killer = {};
   bool _killerLoaded = false;
+
+  /// Tier code lists fetched from Firebase, cached for the session. Picking an
+  /// unattempted puzzle needs the whole candidate list, and without this cache
+  /// every New Game would re-download it.
+  final Map<Difficulty, List<String>> _indexCache = {};
 
   PuzzleRepository({http.Client? client}) : _client = client ?? http.Client();
 
@@ -55,15 +75,24 @@ class PuzzleRepository {
     return map;
   }
 
-  /// A random bundled Killer puzzle of the given [difficulty].
-  Future<Puzzle> randomKillerByDifficulty(Difficulty difficulty) async {
+  /// A random bundled Killer puzzle of the given [difficulty], skipping any
+  /// code in [exclude]. Throws [PuzzlesExhausted] once the tier is used up.
+  Future<Puzzle> randomKillerByDifficulty(
+    Difficulty difficulty, {
+    Set<String> exclude = const {},
+  }) async {
     await _ensureKiller();
     final list = _killer[difficulty] ?? const [];
     if (list.isEmpty) {
       throw PuzzleNotFound(
           'No ${difficulty.label} Killer puzzles available offline.');
     }
-    return list[_rng.nextInt(list.length)];
+    final fresh = [
+      for (final p in list)
+        if (!exclude.contains(p.code)) p
+    ];
+    if (fresh.isEmpty) throw PuzzlesExhausted(difficulty);
+    return fresh[_rng.nextInt(fresh.length)];
   }
 
   /// Tiers that actually have bundled Killer puzzles (Killer omits Extreme), so
@@ -82,12 +111,19 @@ class PuzzleRepository {
     return [for (final list in _starter.values) ...list];
   }
 
-  /// A random puzzle of the given [difficulty]. Tries Firebase, falls back to
-  /// the bundled starter set.
-  Future<Puzzle> randomByDifficulty(Difficulty difficulty) async {
+  /// A random puzzle of the given [difficulty], skipping any code in [exclude]
+  /// so the player isn't handed one they have already seen. Tries Firebase,
+  /// falls back to the bundled starter set.
+  ///
+  /// Throws [PuzzlesExhausted] when every puzzle in the tier is excluded, which
+  /// the caller can turn into a "replay this tier?" prompt.
+  Future<Puzzle> randomByDifficulty(
+    Difficulty difficulty, {
+    Set<String> exclude = const {},
+  }) async {
     if (firebaseConfigured) {
       try {
-        final p = await _randomFromFirebase(difficulty);
+        final p = await _randomFromFirebase(difficulty, exclude);
         if (p != null) return p;
       } catch (_) {
         // fall through to starter set
@@ -98,7 +134,14 @@ class PuzzleRepository {
     if (list.isEmpty) {
       throw PuzzleNotFound('No ${difficulty.label} puzzles available offline.');
     }
-    return list[_rng.nextInt(list.length)];
+    final fresh = [
+      for (final p in list)
+        if (!exclude.contains(p.code)) p
+    ];
+    // Remote exhaustion falls through to here, so the local bank is the single
+    // place that decides a tier is finished.
+    if (fresh.isEmpty) throw PuzzlesExhausted(difficulty);
+    return fresh[_rng.nextInt(fresh.length)];
   }
 
   /// Look up a puzzle by its 6-char code (case-insensitive).
@@ -107,7 +150,8 @@ class PuzzleRepository {
     if (firebaseConfigured) {
       try {
         final res = await _client
-            .get(Uri.parse('$firebaseDbUrl/puzzles/$norm.json'));
+            .get(Uri.parse('$firebaseDbUrl/puzzles/$norm.json'))
+            .timeout(_netTimeout);
         if (res.statusCode == 200 && res.body != 'null' && res.body.isNotEmpty) {
           final json = jsonDecode(res.body) as Map<String, dynamic>;
           return Puzzle.fromJson(json);
@@ -123,17 +167,36 @@ class PuzzleRepository {
     throw PuzzleNotFound('No puzzle found for code "$norm".');
   }
 
-  Future<Puzzle?> _randomFromFirebase(Difficulty difficulty) async {
-    final idxRes = await _client
-        .get(Uri.parse('$firebaseDbUrl/index/${difficulty.id}.json'));
-    if (idxRes.statusCode != 200 || idxRes.body == 'null') return null;
-    final idx = jsonDecode(idxRes.body) as Map<String, dynamic>;
-    if (idx.isEmpty) return null;
-    final codes = idx.keys.toList();
-    final code = codes[_rng.nextInt(codes.length)];
-    final res =
-        await _client.get(Uri.parse('$firebaseDbUrl/puzzles/$code.json'));
+  Future<Puzzle?> _randomFromFirebase(
+      Difficulty difficulty, Set<String> exclude) async {
+    final codes = await _tierIndex(difficulty);
+    if (codes == null || codes.isEmpty) return null;
+    final fresh = [
+      for (final c in codes)
+        if (!exclude.contains(c)) c
+    ];
+    // Exhausted remotely: return null so the local bank gets the final say.
+    if (fresh.isEmpty) return null;
+    final code = fresh[_rng.nextInt(fresh.length)];
+    final res = await _client
+        .get(Uri.parse('$firebaseDbUrl/puzzles/$code.json'))
+        .timeout(_netTimeout);
     if (res.statusCode != 200 || res.body == 'null') return null;
     return Puzzle.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// The tier's full code list from `/index/<tier>`, fetched once per session.
+  Future<List<String>?> _tierIndex(Difficulty difficulty) async {
+    final cached = _indexCache[difficulty];
+    if (cached != null) return cached;
+    final res = await _client
+        .get(Uri.parse('$firebaseDbUrl/index/${difficulty.id}.json'))
+        .timeout(_netTimeout);
+    if (res.statusCode != 200 || res.body == 'null') return null;
+    final idx = jsonDecode(res.body) as Map<String, dynamic>;
+    if (idx.isEmpty) return null;
+    final codes = idx.keys.toList();
+    _indexCache[difficulty] = codes;
+    return codes;
   }
 }

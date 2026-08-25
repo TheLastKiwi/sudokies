@@ -1,40 +1,44 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'auth_service.dart';
 import 'firebase_config.dart';
 import 'history_record.dart';
 
 /// Persists puzzle attempts/completions locally (shared_preferences) and, when
-/// Firebase is configured, mirrors them to `history/<deviceId>/<code>`.
+/// Firebase and anonymous sign-in are configured, mirrors them to
+/// `history/<uid>/<code>` — a subtree only that signed-in account can touch.
+///
+/// Local storage is always the source of truth; the mirror is a convenience, so
+/// every remote failure is swallowed.
 class HistoryStore {
   static const _prefsKey = 'history_records_v1';
-  static const _deviceKey = 'device_id_v1';
+  static const _timeout = Duration(seconds: 8);
 
   final SharedPreferences _prefs;
+  final AuthService? _auth;
   final http.Client _client;
-  late final String deviceId;
   final Map<String, HistoryRecord> _records = {};
 
-  HistoryStore(this._prefs, {http.Client? client})
-      : _client = client ?? http.Client() {
-    deviceId = _prefs.getString(_deviceKey) ?? _newDeviceId();
+  HistoryStore(this._prefs, {AuthService? auth, http.Client? client})
+      : _auth = auth,
+        _client = client ?? http.Client() {
     _load();
   }
 
-  static Future<HistoryStore> create({http.Client? client}) async {
+  static Future<HistoryStore> create({
+    AuthService? auth,
+    http.Client? client,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    return HistoryStore(prefs, client: client);
+    return HistoryStore(prefs, auth: auth, client: client);
   }
 
-  String _newDeviceId() {
-    final rng = Random.secure();
-    final id = List.generate(16, (_) => rng.nextInt(16).toRadixString(16)).join();
-    _prefs.setString(_deviceKey, id);
-    return id;
-  }
+  /// The anonymous account this history mirrors under, or null when sync is off
+  /// or sign-in has not succeeded yet.
+  String? get uid => _auth?.uid;
 
   void _load() {
     final raw = _prefs.getString(_prefsKey);
@@ -54,6 +58,16 @@ class HistoryStore {
 
   HistoryRecord? forCode(String code) => _records[code.toUpperCase()];
 
+  /// Every code the player has opened, finished or not. Used to exclude
+  /// puzzles from New Game so they are never handed the same one twice.
+  Set<String> get attemptedCodes => _records.keys.toSet();
+
+  /// Codes the player actually solved — a subset of [attemptedCodes].
+  Set<String> get completedCodes => {
+        for (final r in _records.values)
+          if (r.isCompleted) r.code
+      };
+
   Future<void> upsert(HistoryRecord record) async {
     _records[record.code] = record;
     await _persistLocal();
@@ -65,12 +79,24 @@ class HistoryStore {
     await _prefs.setString(_prefsKey, jsonEncode(list));
   }
 
-  void _pushRemote(HistoryRecord record) {
-    if (!firebaseConfigured) return;
-    final uri =
-        Uri.parse('$firebaseDbUrl/history/$deviceId/${record.code}.json');
-    _client.put(uri, body: jsonEncode(record.toJson())).catchError(
-          (_) => http.Response('', 599),
-        );
+  /// Mirrors one record into the signed-in account's own subtree. Signs in
+  /// lazily on the first push, so a cold start never blocks on the network.
+  Future<void> _pushRemote(HistoryRecord record) async {
+    final auth = _auth;
+    if (auth == null || !auth.enabled || !firebaseConfigured) return;
+    try {
+      final token = await auth.idToken();
+      final id = auth.uid;
+      if (token == null || id == null) return; // offline, or sign-in failed
+      await _client
+          .put(
+            Uri.parse('$firebaseDbUrl/history/$id/${record.code}.json'
+                '?auth=$token'),
+            body: jsonEncode(record.toJson()),
+          )
+          .timeout(_timeout);
+    } catch (_) {
+      // The local write already succeeded; nothing to surface.
+    }
   }
 }
