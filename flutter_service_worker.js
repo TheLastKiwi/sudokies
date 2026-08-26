@@ -3,7 +3,7 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"version.json": "0969e9f6f68b51d649d51c4050603eed",
+const RESOURCES = {"version.json": "599b44944e957042a3db7169eb1fd2e1",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-maskable-512.png": "301a7604d45b3e739efc881eb04896ea",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
@@ -29,14 +29,14 @@ const RESOURCES = {"version.json": "0969e9f6f68b51d649d51c4050603eed",
 "assets/FontManifest.json": "092d5ecb1bd2d39009e3238ad889333b",
 "assets/AssetManifest.bin": "1b124427b2e6c9a40aada39084b518e3",
 "assets/assets/techniques.json": "2ecffdfdfea6869dd0382adbef0375e7",
-"assets/assets/puzzles/starter.json": "0c6ba329698391419a3fa7c9c9a31a31",
-"assets/assets/puzzles/killer.json": "ceea87d1db7cba82cce7eb5b3f410ad7",
+"assets/assets/puzzles/starter.json": "1bc617a0647eeb30d6a061aa04793569",
+"assets/assets/puzzles/killer.json": "8510f9122fa466891590bee10d5f33c3",
 "assets/assets/fonts/Roboto-Medium.ttf": "d08840599e05db7345652d3d417574a9",
 "assets/assets/fonts/Roboto-Regular.ttf": "3e1af3ef546b9e6ecef9f3ba197bf7d2",
 "assets/assets/fonts/Roboto-Bold.ttf": "ee7b96fa85d8fdb8c126409326ac2d2b",
 "assets/shaders/ink_sparkle.frag": "ecc85a2e95f5e9f53123dcaf8cb9b6ce",
-"main.dart.js": "0a7c5c78e25c611582d89f1daa6e4c9c",
-"flutter_bootstrap.js": "257b6d26764983c3d26c67dc2002340f",
+"main.dart.js": "f2586a3b69f67c17d11bb8971547986f",
+"flutter_bootstrap.js": "cffd802521769acf92ae47b8103f48f8",
 "manifest.json": "a4c92bf6f06f707928bf1eff2d948ee5"};
 // The application shell files that are downloaded before a service worker can
 // start.
