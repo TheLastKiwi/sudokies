@@ -1,9 +1,16 @@
-/// Pushes the already-built puzzle bank to the Realtime Database.
+/// Pushes the full puzzle banks to the Realtime Database.
 ///
-/// Unlike `build_bank.dart --upload`, this does not regenerate anything: it
-/// reads the committed assets and uploads exactly those, so share codes people
-/// already hold keep working. Two bulk writes instead of one request per
-/// puzzle.
+/// Unlike `build_bank.dart`, this does not regenerate anything: it reads the
+/// committed banks in `tool/data/` and uploads exactly those, so share codes
+/// people already hold keep working. Three bulk writes instead of one request
+/// per puzzle.
+///
+/// Both banks share one flat `/puzzles/<code>` namespace — codes are unique
+/// across variants, so `byCode` lookups resolve a Killer share code the same
+/// way they resolve a classic one. Only the tier indexes are kept apart:
+/// classic at `/index/<tier>`, Killer at `/index/killer/<tier>`. They go up in
+/// a single PUT to `/index` because writing the subtrees separately would have
+/// each one clobber the other.
 ///
 /// Run:  dart run tool/upload_bank.dart [--dry-run] [--auth=SECRET]
 ///
@@ -18,8 +25,14 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sudokies/data/firebase_config.dart';
 
-const _starterAsset = 'assets/puzzles/starter.json';
+const _classicBank = 'tool/data/starter_full.json';
+const _killerBank = 'tool/data/killer_full.json';
 const _techniquesAsset = 'assets/techniques.json';
+
+/// Where the Killer tier index hangs inside `/index`. Nested rather than a new
+/// top-level node so the existing `".read": true` on `/index` already covers
+/// it and the rules need no second deploy.
+const _killerIndexKey = 'killer';
 
 Future<void> main(List<String> args) async {
   final dryRun = args.contains('--dry-run');
@@ -32,32 +45,24 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
 
-  // --- Reshape the bundled bank into the tree the app reads ---
-  final starter = _readJson(_starterAsset);
+  // --- Reshape both banks into the tree the app reads ---
   final puzzles = <String, dynamic>{};
-  final index = <String, Map<String, bool>>{};
+  final index = <String, dynamic>{};
 
-  (starter['puzzles'] as Map<String, dynamic>).forEach((tier, list) {
-    index[tier] = {};
-    for (final entry in (list as List)) {
-      final puzzle = Map<String, dynamic>.from(entry as Map);
-      final code = puzzle['code'] as String;
-      if (puzzles.containsKey(code)) {
-        stderr.writeln('Duplicate code $code in $_starterAsset — aborting.');
-        exit(1);
-      }
-      puzzles[code] = puzzle;
-      index[tier]![code] = true;
-    }
-  });
+  final classic = _collect(_classicBank, puzzles);
+  classic.forEach((tier, codes) => index[tier] = codes);
+
+  final killer = _collect(_killerBank, puzzles);
+  if (killer.isNotEmpty) index[_killerIndexKey] = killer;
 
   final techniques = File(_techniquesAsset).existsSync()
       ? _readJson(_techniquesAsset)['techniques']
       : null;
 
-  for (final tier in index.keys) {
-    stdout.writeln('  $tier: ${index[tier]!.length}');
-  }
+  stdout.writeln('classic');
+  classic.forEach((tier, codes) => stdout.writeln('  $tier: ${codes.length}'));
+  stdout.writeln('killer');
+  killer.forEach((tier, codes) => stdout.writeln('  $tier: ${codes.length}'));
   stdout.writeln('${puzzles.length} puzzles'
       '${techniques == null ? '' : ' + ${(techniques as List).length} techniques'}');
 
@@ -91,6 +96,38 @@ Future<void> main(List<String> args) async {
   await put('index', index);
   if (techniques != null) await put('techniques', techniques);
   stdout.writeln('Done.');
+}
+
+/// Reads one bank, adds every puzzle to the shared [puzzles] map, and returns
+/// its `tier -> {code: true}` index. Aborts on a duplicate code: the flat
+/// namespace means a collision would silently overwrite a live puzzle and
+/// break whatever share codes point at it.
+Map<String, Map<String, bool>> _collect(
+  String path,
+  Map<String, dynamic> puzzles,
+) {
+  final file = File(path);
+  if (!file.existsSync()) {
+    stderr.writeln('Missing $path — run from the repo root.');
+    exit(1);
+  }
+  final bank = _readJson(path);
+  final index = <String, Map<String, bool>>{};
+
+  (bank['puzzles'] as Map<String, dynamic>).forEach((tier, list) {
+    index[tier] = {};
+    for (final entry in (list as List)) {
+      final puzzle = Map<String, dynamic>.from(entry as Map);
+      final code = puzzle['code'] as String;
+      if (puzzles.containsKey(code)) {
+        stderr.writeln('Duplicate code $code in $path — aborting.');
+        exit(1);
+      }
+      puzzles[code] = puzzle;
+      index[tier]![code] = true;
+    }
+  });
+  return index;
 }
 
 Map<String, dynamic> _readJson(String path) {

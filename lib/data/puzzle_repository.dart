@@ -42,8 +42,10 @@ class PuzzleRepository {
 
   /// Tier code lists fetched from Firebase, cached for the session. Picking an
   /// unattempted puzzle needs the whole candidate list, and without this cache
-  /// every New Game would re-download it.
+  /// every New Game would re-download it. Killer lives in its own namespace, so
+  /// it gets its own cache rather than colliding with the classic tiers.
   final Map<Difficulty, List<String>> _indexCache = {};
+  final Map<Difficulty, List<String>> _killerIndexCache = {};
 
   PuzzleRepository({http.Client? client}) : _client = client ?? http.Client();
 
@@ -53,8 +55,8 @@ class PuzzleRepository {
     _loaded = true;
   }
 
-  /// The bundled Killer bank, keyed by tier. Local-only (Killer puzzles carry
-  /// arbitrary cage rules and are not served from Firebase).
+  /// The bundled Killer bank, keyed by tier — the offline subset, and the
+  /// fallback whenever Firebase is unreachable or has nothing fresh left.
   Future<void> _ensureKiller() async {
     if (_killerLoaded) return;
     _killer = await _loadBank('assets/puzzles/killer.json');
@@ -75,12 +77,24 @@ class PuzzleRepository {
     return map;
   }
 
-  /// A random bundled Killer puzzle of the given [difficulty], skipping any
-  /// code in [exclude]. Throws [PuzzlesExhausted] once the tier is used up.
+  /// A random Killer puzzle of the given [difficulty], skipping any code in
+  /// [exclude]. Tries Firebase, falls back to the bundled bank.
+  ///
+  /// The bundle ships a subset of the tier, so online players draw from the
+  /// full bank and offline players still get a playable one. Throws
+  /// [PuzzlesExhausted] once the tier is used up.
   Future<Puzzle> randomKillerByDifficulty(
     Difficulty difficulty, {
     Set<String> exclude = const {},
   }) async {
+    if (firebaseConfigured) {
+      try {
+        final p = await _randomKillerFromFirebase(difficulty, exclude);
+        if (p != null) return p;
+      } catch (_) {
+        // fall through to bundled bank
+      }
+    }
     await _ensureKiller();
     final list = _killer[difficulty] ?? const [];
     if (list.isEmpty) {
@@ -105,10 +119,18 @@ class PuzzleRepository {
     ];
   }
 
-  /// All starter puzzles flattened (used by repository fallbacks / lookups).
-  Future<List<Puzzle>> _allStarter() async {
+  /// Every bundled puzzle, both banks, flattened for code lookups.
+  ///
+  /// Killer has to be in here: its codes are shareable and resolve from
+  /// Firebase, so a code that arrives while the player is offline must still
+  /// find the puzzle sitting in their own bundle instead of dead-ending.
+  Future<List<Puzzle>> _allBundled() async {
     await _ensureStarter();
-    return [for (final list in _starter.values) ...list];
+    await _ensureKiller();
+    return [
+      for (final list in _starter.values) ...list,
+      for (final list in _killer.values) ...list,
+    ];
   }
 
   /// A random puzzle of the given [difficulty], skipping any code in [exclude]
@@ -157,10 +179,10 @@ class PuzzleRepository {
           return Puzzle.fromJson(json);
         }
       } catch (_) {
-        // fall through to starter set
+        // fall through to the bundled banks
       }
     }
-    final all = await _allStarter();
+    final all = await _allBundled();
     for (final p in all) {
       if (p.code == norm) return p;
     }
@@ -185,18 +207,49 @@ class PuzzleRepository {
     return Puzzle.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
+  Future<Puzzle?> _randomKillerFromFirebase(
+      Difficulty difficulty, Set<String> exclude) async {
+    final codes = await _killerTierIndex(difficulty);
+    if (codes == null || codes.isEmpty) return null;
+    final fresh = [
+      for (final c in codes)
+        if (!exclude.contains(c)) c
+    ];
+    // Exhausted remotely: return null so the local bank gets the final say.
+    if (fresh.isEmpty) return null;
+    final code = fresh[_rng.nextInt(fresh.length)];
+    final res = await _client
+        .get(Uri.parse('$firebaseDbUrl/puzzles/$code.json'))
+        .timeout(_netTimeout);
+    if (res.statusCode != 200 || res.body == 'null') return null;
+    return Puzzle.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
   /// The tier's full code list from `/index/<tier>`, fetched once per session.
-  Future<List<String>?> _tierIndex(Difficulty difficulty) async {
-    final cached = _indexCache[difficulty];
+  Future<List<String>?> _tierIndex(Difficulty difficulty) =>
+      _fetchIndex('index/${difficulty.id}', difficulty, _indexCache);
+
+  /// The Killer tier's code list. Killer indexes are nested one level deeper so
+  /// they share the `/index` read rule instead of needing their own.
+  Future<List<String>?> _killerTierIndex(Difficulty difficulty) =>
+      _fetchIndex('index/killer/${difficulty.id}', difficulty,
+          _killerIndexCache);
+
+  Future<List<String>?> _fetchIndex(
+    String path,
+    Difficulty difficulty,
+    Map<Difficulty, List<String>> cache,
+  ) async {
+    final cached = cache[difficulty];
     if (cached != null) return cached;
     final res = await _client
-        .get(Uri.parse('$firebaseDbUrl/index/${difficulty.id}.json'))
+        .get(Uri.parse('$firebaseDbUrl/$path.json'))
         .timeout(_netTimeout);
     if (res.statusCode != 200 || res.body == 'null') return null;
     final idx = jsonDecode(res.body) as Map<String, dynamic>;
     if (idx.isEmpty) return null;
     final codes = idx.keys.toList();
-    _indexCache[difficulty] = codes;
+    cache[difficulty] = codes;
     return codes;
   }
 }

@@ -1,6 +1,7 @@
 /// Offline Killer-bank builder. Generates Killer puzzles with [KillerGenerator],
 /// which grades each by the hardest technique the logical solver needs, buckets
-/// them by tier, and writes the bundled `assets/puzzles/killer.json`.
+/// them by tier, and writes the full bank to `tool/data/killer_full.json`.
+/// `tool/trim_bank.dart` then cuts it down to the shipped asset.
 ///
 /// Killer techniques span Easy..Expert (no Killer technique reaches the Extreme
 /// band), so the bank deliberately omits Extreme. If a tier can't be filled
@@ -112,7 +113,7 @@ void main(List<String> args) {
     'version': 1,
     'puzzles': {for (final d in _tiers) d.id: buckets[d]},
   };
-  final file = File('assets/puzzles/killer.json');
+  final file = File('tool/data/killer_full.json');
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(out));
   stdout.writeln('Wrote ${file.path}');

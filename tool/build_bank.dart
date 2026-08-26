@@ -1,7 +1,10 @@
 /// Offline bank builder. Generates puzzles, grades them by the hardest
 /// required technique, assigns 6-char codes, mines one clean example per
-/// technique, writes the bundled assets, and (if Firebase is configured)
-/// uploads everything to the Realtime Database.
+/// technique, and writes the full bank to `tool/data/starter_full.json`.
+///
+/// The full bank is committed but not shipped: `tool/trim_bank.dart` cuts it
+/// down to the subset bundled in the app, and `tool/upload_bank.dart` pushes
+/// the whole thing to the Realtime Database.
 ///
 /// Run:  dart run tool/build_bank.dart [--easy=8 --medium=8 --hard=6 \
 ///         --expert=4 --extreme=3 --maxAttempts=6000 --upload]
@@ -98,10 +101,13 @@ Future<void> main(List<String> args) async {
       for (final d in Difficulty.values) d.id: buckets[d],
     },
   };
-  File('assets/puzzles/starter.json').writeAsStringSync(
+  final starterFile = File('tool/data/starter_full.json');
+  starterFile.parent.createSync(recursive: true);
+  starterFile.writeAsStringSync(
     const JsonEncoder.withIndent('  ').convert(starter),
   );
-  stdout.writeln('Wrote assets/puzzles/starter.json');
+  stdout.writeln('Wrote ${starterFile.path} '
+      '(run tool/trim_bank.dart to refresh the shipped asset)');
 
   // --- Write techniques asset (mined examples) ---
   final techniques = [
